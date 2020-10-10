@@ -7,12 +7,11 @@ import socket
 import threading
 
 import base64
-import numpy as np
 import pandas as pd
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
-MESSAGE_SIZE = 8  # device ID, xyzypr, timestamp
+MESSAGE_SIZE = 24 # position, action, delay, (xyzypr + timestamp) * 3
 
 
 class Server(threading.Thread):
@@ -20,7 +19,6 @@ class Server(threading.Thread):
         super(Server, self).__init__()
 
         self.connection = None
-        # self.timer = None
         self.logout = False
 
         # Create a TCP/IP socket and bind to port
@@ -40,7 +38,7 @@ class Server(threading.Thread):
     def decrypt_message(self, cipher_text):
         decoded_message = base64.b64decode(cipher_text)
         iv = decoded_message[:16]
-        secret_key = bytes(str(self.secret_key), encoding="utf8") 
+        secret_key = bytes(str(self.secret_key), encoding="utf8")
 
         cipher = AES.new(secret_key, AES.MODE_CBC, iv)
         decrypted_message = unpad(cipher.decrypt(decoded_message[16:]), AES.block_size)
@@ -49,15 +47,13 @@ class Server(threading.Thread):
         decrypted_message = decrypted_message[decrypted_message.find('#'):]
         decrypted_message = bytes(decrypted_message[1:], 'utf8').decode('utf8')
 
-        messages = decrypted_message.split('|')
-        deviceid, x, y, z, yaw, pitch, roll, timestamp = messages[:MESSAGE_SIZE]
-        return {
-            'deviceID': deviceid,
-            'x': x, 'y': y, 'z': z,
-            'yaw': yaw, 'pitch': pitch, 'roll': roll,
-            'timestamp': timestamp
-        }
-
+        msg = decrypted_message.split('|')
+        headers = ['position', 'action', 'delay', 'x1', 'y1', 'z1', 'yaw1', 'pitch1', 'roll1', 'timestamp1',
+                   'x2', 'y2', 'z2', 'yaw2', 'pitch2', 'roll2', 'timestamp2',
+                   'x3', 'y3', 'z3', 'yaw3', 'pitch3', 'roll3', 'timestamp3']
+        data = dict(zip(headers, msg))
+        return data
+    
     def run(self):
         while not self.shutdown.is_set():
             data = self.connection.recv(1024)
@@ -67,7 +63,7 @@ class Server(threading.Thread):
                     msg = data.decode("utf8")
                     decrypted_message = self.decrypt_message(msg)
                     print('Received data:', decrypted_message)
-                    # todo: send data received to ML
+                    # todo: convert data dict to required format to store
                 except Exception as e:
                     print("Failure", str(e))
             else:
@@ -86,27 +82,22 @@ class Server(threading.Thread):
     def stop(self):
         self.connection.close()
         self.shutdown.set()
-        # self.timer.cancel()
 
 
 def main():
     if len(sys.argv) != 3:
         print('Invalid number of arguments')
-        print('python server.py [IP address] [Port]')
-        print('in current setup, IP address is localhost')
+        print('python dash_server.py [IP address] [Port]')
+        print('IP address is public ip of device hosting dashboard, port is...um haven\'t thought that through')
         sys.exit()
 
     ip_addr = sys.argv[1]
     port_num = int(sys.argv[2])
 
-    server1 = Server(ip_addr, port_num)
-    # server2 = Server(ip_addr, port_num, group_id)
-    # server3 = Server(ip_addr, port_num, group_id)
-    server1.start()
-    # server2.start()
-    # server3.start()
+    my_server = Server(ip_addr, port_num)
+    my_server.start()
 
 
 if __name__ == '__main__':
-    main() # python3 server.py [server IP address] [Port] [5]
+    main()
 
