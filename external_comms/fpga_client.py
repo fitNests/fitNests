@@ -13,7 +13,7 @@ from base64 import b64encode
 DEVICE = ['1', '2', '3']
 
 
-class Client():
+class Client:
     def __init__(self, ip_address, port_num, secret_key):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (ip_address, port_num)
@@ -33,6 +33,9 @@ class Client():
         print("to send:", to_send)
         self.sock.sendall(to_send)
 
+    '''
+    rmb to call this when data is done being sent
+    '''
     def stop(self):
         self.sock.close()
 
@@ -60,7 +63,7 @@ def construct_message():
 def main():
     if len(sys.argv) != 4:
         print('Invalid number of arguments')
-        print('python server.py [IP address] [Port] [secret key]')
+        print('python3 fpga_client.py [IP address] [Port] [secret key]')
         sys.exit()
 
     ip_addr = sys.argv[1]
@@ -71,19 +74,21 @@ def main():
     count = 0
 
     client = Client(ip_addr, port_num, secret_key)
-    time.sleep(60)
-
-    # testing client-server connection with 20 randomly generated packets
-    while action != "logout":
-        print(f"data: #{count + 1}")
-        message = construct_message()
-        client.send_data(message)
-        time.sleep(2)
-        count += 1
-        if count == 50:
-            client.stop()
-            print("stop sending")
-            break
+    try:
+        time.sleep(10)
+        # testing client-server connection with 20 randomly generated packets
+        while action != "logout":
+            print(f"data: #{count + 1}")
+            message = construct_message()
+            client.send_data(message)
+            time.sleep(2)
+            count += 1
+            if count == 15:
+                client.stop()
+                print("stop sending")
+                break
+    except KeyboardInterrupt:
+        client.stop()
 
     '''
     # stress testing number of packets sent in 5s with at least 10ms delay
