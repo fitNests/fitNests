@@ -9,43 +9,60 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 from base64 import b64encode
 from bluepy.btle import Scanner, DefaultDelegate, Peripheral, BTLEDisconnectError
+# from bluepy_edit.btle import Scanner, DefaultDelegate, Peripheral, BTLEDisconnectError
 from time import sleep, time
 from collections import deque
 from random import uniform,randint
 
-
-#BLE stuff
-# bt_addrs = {"34:15:13:22:a9:be":0, "2c:ab:33:cc:68:fa":1, "34:15:13:22:96:6f":2 } #, "c8:df:84:fe:3f:f4":3
-# bt_addrs_isConnected = {"34:15:13:22:a9:be":False, "2c:ab:33:cc:68:fa":False, "34:15:13:22:96:6f":False} #, "c8:df:84:fe:3f:f4":False
-
-bt_addrs = {"34:15:13:22:a9:be":0, "2c:ab:33:cc:68:fa":1, "34:15:13:22:96:6f":2, "c8:df:84:fe:3f:f4":3} #
-bt_addrs_isConnected = {"34:15:13:22:a9:be":False, "2c:ab:33:cc:68:fa":False, "34:15:13:22:96:6f":False, "c8:df:84:fe:3f:f4":False} #
-connections = {} #Stores peripherals of each beetle
-connection_threads = {} #Stores threads linked to peripherals --useless atm
 BLE_SERVICE_UUID = "0000dfb0-0000-1000-8000-00805f9b34fb"
 BLE_CHARACTERISTIC_UUID = "0000dfb1-0000-1000-8000-00805f9b34fb"
-scanner = Scanner(0)
-endFlag = False
 PACKET_SIZE = 19
 PACKET_ZERO_OFFSET = 13500
 BUFFER_SKIP = 'xxx111xxx111xxx111x'
+HANDSHAKE_FLAG = 1
+GOOD_DATA_FLAG = 2
+
+###
+
+#BEETLES' MAC ADDRESSES
+#Format: <MAC_IN_LOWERCASE>:<DEVICE_NUM>
+bt_addrs = {"34:15:13:22:a9:be":0,
+            "2c:ab:33:cc:68:fa":1, 
+            "34:15:13:22:96:6f":2, 
+            "c8:df:84:fe:3f:f4":3}
+            
+#Sets all addresses to "not connected"
+bt_addrs_isConnected = {}
+for addr in bt_addrs:
+    bt_addrs_isConnected[addr] = False
+
 delayWindow = []
 for i in range(4):
-    delayWindow.append(i*0.521)
+    delayWindow.append(i*0.621)
+
+connections = {} #Stores peripherals of each beetle
+connection_threads = {} #Stores threads linked to peripherals --useless atm
+endFlag = False
+scanner = Scanner(0)
+totalDevicesConnected = 0
 lock = threading.Lock()
 
 #Debugging
 printRawData = 0
 printError = 0
 printGoodData = 0
-printSummary = 1
-clientFlag = 1
+printSummary = 0
+
+#Set to 1 send to socket!
+clientFlag = 0
 
 #Client
 ip_addr = 'localhost'
 port_num = 8080
 secret_key = 'thisisunhackable'
 client = None
+
+###
 
 # dummy data for test purposes. not even a good one at that
 def construct_message(data=None):
@@ -343,54 +360,62 @@ class ConnectionHandlerThread (threading.Thread):
         self.addr = ''
 
     def reconnect(self, addr):
+        global totalDevicesConnected
+        global lock
+        print('Total devices', totalDevicesConnected)
         #Loop here until reconnected (Thread is doing nothing anyways...)
         while True:
+            lock.acquire()
             try:
-                # print(f"{self.connection_index}: reconnecting to", addr)
-                
-                # devices = scanner.scan(2)
-                # for d in devices:
-                    # if d.addr in bt_addrs:
-                        # if bt_addrs_isConnected[d.addr]:
-                            # continue
-                
-                        # p = Peripheral(addr)
-                        # #Reset configurations of connection/peripheral (overhead code)
-                        # self.connection = p
-                        # self.connection.withDelegate(NotificationDelegate(self.connection_index))
-                        # self.s = self.connection.getServiceByUUID(BLE_SERVICE_UUID)
-                        # self.c = self.s.getCharacteristics()[0]
-                        
-                        # connections[self.connection_index] = self.connection
-                        
-                        # print("Reconnected to ", addr, '!')
-                        # self.c.write(("H").encode()) #Need to handshake with beetle again to start sending data
-                        # flag = True
-                        # self.isConnected = True
-                        # return True
-                p = Peripheral(addr)
-                #Reset configurations of connection/peripheral (overhead code)
-                self.connection = p
-                self.connection.withDelegate(NotificationDelegate(self.connection_index))
-                self.s = self.connection.getServiceByUUID(BLE_SERVICE_UUID)
-                self.c = self.s.getCharacteristics()[0]
-                
-                connections[self.connection_index] = self.connection
-                
-                print("Reconnected to ", addr, '!')
-                
-                connections[self.connection_index] = self.connection
-                sleep(1.5)
-                self.c.write(("H").encode()) #Need to handshake with beetle again to start sending data
-                self.isConnected = True
-                return True
+                if totalDevicesConnected == 0:
+                    devices = scanner.scan(2)
+                    for d in devices:
+                        if d.addr in bt_addrs:
+                            if bt_addrs_isConnected[d.addr]:
+                                print(d.addr)
+                                continue
+                            print(f"A: {self.connection_index}, trying...")
+                            p = Peripheral(addr)
+                            print(f"{self.connection_index}, got it...")
+                            #Reset configurations of connection/peripheral (overhead code)
+                            self.connection = p
+                            self.connection.withDelegate(NotificationDelegate(self.connection_index))
+                            self.s = self.connection.getServiceByUUID(BLE_SERVICE_UUID)
+                            self.c = self.s.getCharacteristics()[0]
+                            connections[self.connection_index] = self.connection
+                            bt_addrs_isConnected[addr] = True
+                            print("Reconnected to ", addr, '!')
+                            self.c.write(("H").encode()) #Need to handshake with beetle again to start sending data
+                            self.isConnected = True
+                            totalDevicesConnected += 1
+                            lock.release()
+                            return True
+                else:
+                    print(f"B: {self.connection_index}, trying...")
+                    p = Peripheral(addr)
+                    print(f"{self.connection_index}, got it...")
+                    #Reset configurations of connection/peripheral (overhead code)
+                    self.connection = p
+                    self.connection.withDelegate(NotificationDelegate(self.connection_index))
+                    self.s = self.connection.getServiceByUUID(BLE_SERVICE_UUID)
+                    self.c = self.s.getCharacteristics()[0]
+                    connections[self.connection_index] = self.connection
+                    bt_addrs_isConnected[addr] = True
+                    print("Reconnected to ", addr, '!')
+                    self.c.write(("H").encode()) #Need to handshake with beetle again to start sending data
+                    self.isConnected = True
+                    totalDevicesConnected += 1
+                    lock.release()
+                    return True
             except:
-                pass
-                # print(self.connection_index, "Error when reconnecting..")
+                print(self.connection_index, "Error when reconnecting..")
+                #sleep(delayWindow[randint(0, 3)]) #Delay to avoid hoarding all the processing power
+            lock.release()
             sleep(delayWindow[randint(0, 3)]) #Delay to avoid hoarding all the processing power
 
             
     def run(self):
+        global totalDevicesConnected
         #Setup respective delegates, service, characteristic...
         self.connection = connections[self.connection_index]
         self.addr = self.connection.addr
@@ -410,9 +435,10 @@ class ConnectionHandlerThread (threading.Thread):
             #Supposed to write continuously after notification (if connected)...
             if self.isConnected:
                 try:
-                    if self.connection.waitForNotifications(10): #Executed after every handleNotification(), within the given time
+                    if self.connection.waitForNotifications(1): #Executed after every handleNotification(), within the given time
                         pass #But at the moment, just passively receives packets from beetle only
                     else:
+                        print(f"{self.connection_index} sending H again")
                         self.c.write(("H").encode())
                 except BTLEDisconnectError: #Handles sudden disconnection
                     if endFlag:
@@ -421,6 +447,7 @@ class ConnectionHandlerThread (threading.Thread):
                     self.isConnected = False
                     bt_addrs_isConnected[self.addr] = False
                     self.connection.disconnect()
+                    totalDevicesConnected -= 1
                     
             #Whenever state of BLE device is disconnected, run this...
             if not self.isConnected:
@@ -435,7 +462,8 @@ class ConnectionHandlerThread (threading.Thread):
     Initial function to establish connection with beetle
 """
 def run():
-    devices = scanner.scan(2)
+    global totalDevicesConnected
+    devices = scanner.scan(3)
     for d in devices:
         if d.addr in bt_addrs:
             if bt_addrs_isConnected[d.addr]:
@@ -451,8 +479,10 @@ def run():
                 t.daemon = True #Set to true so can CTRL-C the program easily
                 t.start()
                 connection_threads[idx] = t
+                totalDevicesConnected += 1
             except: #Raised when unable to create connection
                 print('Error in connecting device')
+                
 
 """
     Main function to manage daemon-threads and keep main thread(program) alive
@@ -469,3 +499,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print('END OF PROGRAM. Disconnecting all devices..')
         endFlag = True
+        
