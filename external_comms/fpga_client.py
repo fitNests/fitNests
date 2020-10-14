@@ -21,12 +21,6 @@ class Client:
         self.secret_key = str(secret_key).encode('utf8')
         print(f"ULTRA96 client is connected to Ultra96 through: {ip_address}:{port_num}")
 
-    '''
-    msg str format is : '#[deviceID]|[x]|[y]|[z]|[y]|[p]|[r]|[timestamp]'
-    timestamp can be some int if not using
-    also encryption/decryption padding might not be compatible or smth sometimes
-    the last byte is decrypted as nonsense on server side
-    '''
     def send_data(self, msg):
         # test_string = "#" + position + "|" + action + "|" + delay + "|"
         to_send = self.encrypt_message(msg)
@@ -34,7 +28,7 @@ class Client:
         self.sock.sendall(to_send)
 
     '''
-    rmb to call this when data is done being sent
+    rmb to call this to shut down the client
     '''
     def stop(self):
         self.sock.close()
@@ -48,7 +42,7 @@ class Client:
         return encoded
 
 
-# dummy data for test purposes. not even a good one at that
+# DEPRECATED
 def construct_message():
     # test data temporary format is '#[deviceID]|[x]|[y]|[z]|[y]|[p]|[r]|[timestamp]
     test_data = [random.choice(DEVICE), random.randint(1, 10000), random.randint(1, 10000), random.randint(1, 10000),
@@ -59,7 +53,7 @@ def construct_message():
     return msg[:-1]
 
 
-# testing purposes
+# testing purposes DEPRECATED PLS DON'T RUN MAIN
 def main():
     if len(sys.argv) != 4:
         print('Invalid number of arguments')

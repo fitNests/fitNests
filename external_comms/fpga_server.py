@@ -44,19 +44,9 @@ class Server(threading.Thread):
 
         cipher = AES.new(secret_key, AES.MODE_CBC, iv)
         decrypted_message = unpad(cipher.decrypt(decoded_message[16:]), AES.block_size)
-        decrypted_message = decrypted_message.decode('utf8')
+        msg = decrypted_message.decode('utf8')
 
-        decrypted_message = decrypted_message[decrypted_message.find('#'):]
-        decrypted_message = bytes(decrypted_message[1:], 'utf8').decode('utf8')
-
-        messages = decrypted_message.split('|')
-        deviceid, x, y, z, yaw, pitch, roll, timestamp = messages[:MESSAGE_SIZE]
-        return {
-            'deviceID': deviceid,
-            'x': x, 'y': y, 'z': z,
-            'yaw': yaw, 'pitch': pitch, 'roll': roll,
-            'timestamp': timestamp
-        }
+        return msg
 
     def run(self):
         while not self.shutdown.is_set():
