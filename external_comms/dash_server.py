@@ -2,15 +2,14 @@ import os
 import sys
 import random
 import time
+import json
 
 import socket
 import threading
 
-import base64
+from base64 import b64decode
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
-
-MESSAGE_SIZE = 7  # position, action, delay, [xyzypr] * 3
 
 
 class Server(threading.Thread):
@@ -34,22 +33,18 @@ class Server(threading.Thread):
         self.socket.listen(1)
         self.client_address = self.setup_connection()
 
-    def decrypt_message(self, cipher_text):
-        decoded_message = base64.b64decode(cipher_text)
-        iv = decoded_message[:16]
+    def decrypt_message(self, received):
+        decoded_message = json.loads(b64decode(received))
         secret_key = bytes(str(self.secret_key), encoding="utf8")
-
+        iv = b64decode(decoded_message['iv'])
         cipher = AES.new(secret_key, AES.MODE_CBC, iv)
-        decrypted_message = unpad(cipher.decrypt(decoded_message[16:]), AES.block_size)
-        decrypted_message = decrypted_message.decode('utf8')
 
-        decrypted_message = decrypted_message[decrypted_message.find('#'):]
-        decrypted_message = bytes(decrypted_message[1:], 'utf8').decode('utf8')
+        ciphertext = b64decode(decoded_message['ciphertext'])
+        decrypted_message = unpad(cipher.decrypt(ciphertext), AES.block_size)
+        # decrypted_message = decrypted_message.decode('utf8')
+        json_msg = json.loads(decrypted_message)
 
-        msg = decrypted_message.split('|')
-        headers = ['id', 'position', 'action', 'delay', 'user1', 'user2', 'user3']
-        data = dict(zip(headers, msg))
-        return data
+        return json_msg
     
     def run(self):
         while not self.shutdown.is_set():
@@ -60,6 +55,7 @@ class Server(threading.Thread):
                     msg = data.decode("utf8")
                     decrypted_message = self.decrypt_message(msg)
                     print('Received data:', decrypted_message)
+                    print(type(decrypted_message))
                     # todo: convert data dict to required format to store
                 except Exception as e:
                     print("Failure", str(e))
