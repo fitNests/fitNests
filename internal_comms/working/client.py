@@ -4,6 +4,15 @@ import re
 import socket
 import random
 
+#Preprocessing script
+import pandas as pd
+import numpy as np
+import scipy as sp
+import scipy.fftpack
+from scipy.fftpack import fft
+from scipy.signal import welch
+
+
 from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
@@ -50,17 +59,20 @@ lock = threading.Lock()
 #Debugging
 printRawData = 0
 printError = 0
-printGoodData = 1
-printSummary = 1
+printGoodData = 0
+printSummary = 0
 
 #Set to 1 send to socket!
-clientFlag = 0
+clientFlag = 1
 
 #Client
 ip_addr = 'localhost'
 port_num = 8080
 secret_key = 'thisisunhackable'
 client = None
+
+#Preprocessor
+outputBuffer = []
 
 ###
 
@@ -78,17 +90,164 @@ def construct_message(data=None):
             msg = msg + str(element) + '|'
     return msg[:-1]
 
+#Adding to outputBuffer
+def appendToOutputBuffer(data):
+    global outputBuffer
+    data = '[' + data + ']'
+    outputBuffer.append(data)
+
+#Sending data 1-by-1
 def convertAndSendData(dataString, deviceId):
-    pass
-    
     ls = []
     ls.append(int(deviceId))
-    ls += list(map(int, dataString.split('.')))
+    ls += list(map(int, dataString.split(',')))
     ls.append(random.randint(1, 10000))
     msgList = construct_message(ls)
     # print(ls)
     client.send_data(msgList)
 
+'''
+    Class to generate preprocessing data
+'''
+class PreprocessorThread(threading.Thread):
+    def __init__(self, initialTime):
+        threading.Thread.__init__(self)
+        self.startTime = initialTime
+    
+    def run(self):
+        global outputBuffer
+        while time() - self.startTime <= 5:
+            # Block till initial setup time reached
+            pass
+        
+        #Run continuously till end of script
+        while True:
+            #Check if outputBuffer size == 90, then start to send to 'client'
+            if len(outputBuffer) >= 90:
+                self.runPreprocessor()
+                outputBuffer = []
+        
+    def runPreprocessor(self):
+        def extract_data():
+            #read from outputBuffer
+            global outputBuffer
+            data = outputBuffer
+            
+            #parse into lists
+            output = [[] for i in range(6)]
+            for i in range(7, len(data)):
+                if ("[" not in data[i]): # invalid row, either new line char or grabage
+                    continue
+                else:
+                    start = data[i].find("[")
+                    end = data[i].find("]")
+                    arr = data[i][start+1:end].split(",")
+                    for j in range(6):
+                        output[j].append(float(arr[j]))
+                        
+            #Convert to pandas dataframe
+            colNames = ["x_acc", "y_acc", "z_acc", "yaw", "pitch", "roll"]
+            dataDict = dict()
+            for i in range(len(output)):
+                dataDict[colNames[i]] = output[i]
+            dataFrame = pd.DataFrame(dataDict)
+            return dataFrame
+    
+        # call the function to extract the data into a pandas dataframe
+        df = extract_data()
+
+        # use the .describe() method to calculate the time-domain metrics: mean, std, min, max 
+        timeDomainMetrics = df.describe() 
+
+        # initialize the list for storing final data
+        result = []
+
+        # append the time-domain metrics into result
+        for num in [1,2,3,7]:
+            result.extend(timeDomainMetrics.iloc[num].tolist())
+
+        # result == x_mean, y_mean, z_mean, ...., pitch_max
+
+        # obtain the x, y, z acceleration values from raw data
+        x_values = df["x_acc"]
+        y_values = df["y_acc"]
+        z_values = df["z_acc"]
+
+
+        # start calculating frequency domain data
+        t_n = 5   # duration
+        N = 90    # no. of samples
+        T = t_n / N 
+        f_s = 1/T
+
+        def get_psd_values(raw_values, T, N, f_s):
+            f_values, psd_values = welch(raw_values, fs=f_s)
+            return f_values, psd_values
+
+        # calculate the power spectral density (PSD)
+        psdValues = []
+        for values in (x_values, y_values, z_values):
+            psdValues.append(get_psd_values(values, T, N, f_s))
+
+        #xf_values, xpsd_values = get_psd_values(x_values, T, N, f_s)
+        #yf_values, ypsd_values = get_psd_values(y_values, T, N, f_s)
+        #zf_values, zpsd_values = get_psd_values(z_values, T, N, f_s)
+
+        # calculate the signal power P_welch
+        def calculate_P_welch(f_values, psd_values):
+            df_welch = f_values[1] - f_values[0]
+            return np.sum(psd_values) * df_welch
+
+        # calculate Energy
+        def calculate_FFT_Energy(t_values, N=N):
+            Xk = np.fft.fft(t_values)
+            return np.sum(np.abs(Xk)**2/N)
+         
+        # calculate Entropy
+        def calculate_Entropy(psd_values):
+            psdSum = np.sum(psd_values)
+            for i in range(len(psd_values)):
+                psd_values[i] /= psdSum
+                psd_values[i] = psd_values[i] * np.log(psd_values[i])
+            entropy = 0 - np.sum(psd_values)
+            return entropy
+
+        for f_values, psd_values in psdValues:
+            signalPower = calculate_P_welch(f_values, psd_values)
+            signalEntropy = calculate_Entropy(psd_values)
+            result.append(signalPower)
+            result.append(signalEntropy)
+
+        # result == x_mean, y_mean, z_mean, ...., pitch_max, x_power, x_entropy, y_power, y_entropy, z_power, z_entropy
+
+        x_energy = calculate_FFT_Energy(x_values)
+        y_energy = calculate_FFT_Energy(y_values)
+        z_energy = calculate_FFT_Energy(z_values)
+        result.append(x_energy)
+        result.append(y_energy)
+        result.append(z_energy)
+
+        # result == x_mean, y_mean, z_mean, ...., pitch_max, x_power, x_entropy, ..., z_entropy, x_energy, y_energy, z_energy
+
+        xyCorrelation = np.correlate(x_values, y_values)
+        xzCorrelation = np.correlate(x_values, z_values)
+        yzCorrelation = np.correlate(y_values, z_values)
+
+        result.append(xyCorrelation[0])
+        result.append(yzCorrelation[0])
+        result.append(xzCorrelation[0])
+        
+        with open(f"preprocessing.txt", "a") as text_file:
+            print(f"{result}", file=text_file)
+        
+        self.sendToFPGA(result)
+    
+    def sendToFPGA(self, result):
+        msg = ''
+        for element in result:
+            msg += str(element) + '|'
+        msg = msg[:-1]
+        client.send_data(msg)
 
 '''
     Client Class for sending to FPGA
@@ -160,7 +319,7 @@ class BufferHandler():
         output = ''
         data = data[:PACKET_SIZE-1].lower() #str
         for i in range(0, PACKET_SIZE-2, 3):
-            output += str(base30ToDecimal(data[i:i+3])) + '.'
+            output += str(base30ToDecimal(data[i:i+3])) + ','
         output = output[:-1]
         return output
     
@@ -332,6 +491,9 @@ class NotificationDelegate(DefaultDelegate):
                 data = self.bH.convertToDecimal(data)
                 if clientFlag:
                     convertAndSendData(data, deviceId)
+                
+                appendToOutputBuffer(data)
+                
                 #For debugging purposes [good packets]
                 if printGoodData:
                     with open(f"laptopdata{self.number}.txt", "a") as text_file:
@@ -492,7 +654,9 @@ def run():
                 totalDevicesConnected += 1
             except: #Raised when unable to create connection
                 print('Error in connecting device')
-                
+    ppT = PreprocessorThread(time())
+    ppT.daemon = True
+    ppT.start()
 
 """
     Main function to manage daemon-threads and keep main thread(program) alive
