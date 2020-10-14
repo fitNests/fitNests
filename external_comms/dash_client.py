@@ -16,12 +16,12 @@ class Client:
         self.sock.connect(server_address)
         self.secret_key = str(secret_key).encode('utf8')
         print(f"Client is connected to dashboard through: {ip_address}:{port_num}")
-        
+
     def send_data(self, msg):
         to_send = self.encrypt_message(msg)
         print("to send:", to_send)
         self.sock.sendall(to_send)
-            
+
     def stop(self):
         self.sock.close()
 
@@ -36,9 +36,8 @@ class Client:
 
 # dummy data for test purposes.
 def construct_message():
-    # test data temporary format is '#[position]|[action]|[delay]|[x1]|[y1]|[z1]|[y1]|[p1]|[r1]|[timestamp1]|[x2]|
-    # ...|[timestamp3]'. probably need to find a better way to format this than a string
-    test_data = ['1 2 3', 'zigzag', 100, 1, 1, 1, 1, 1, 1, 100, 2, 2, 2, 2, 2, 2, 200, 3, 3, 3, 3, 3, 3, 300]
+    test_data = ['stream', '1 2 3', 'hair', 100, [1, 1, 1, 100, 100, 100], [2, 2, 2, 200, 200, 200],
+                 [3, 3, 3, 300, 300, 300]]
     msg = '#'
     for element in test_data:
         msg = msg + str(element) + '|'
@@ -77,7 +76,7 @@ def main():
                 break
     except KeyboardInterrupt:
         client.stop()
-            
+
 
 if __name__ == '__main__':
     main()
