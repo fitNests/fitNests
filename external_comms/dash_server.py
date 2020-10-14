@@ -7,7 +7,6 @@ import socket
 import threading
 
 import base64
-import pandas as pd
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
@@ -80,6 +79,15 @@ class Server(threading.Thread):
     def stop(self):
         self.connection.close()
         self.shutdown.set()
+
+
+def construct_message():
+    test_data = ['stream', '1 2 3', 'hair', 100, [1, 1, 1, 100, 100, 100], [2, 2, 2, 200, 200, 200],
+                 [3, 3, 3, 300, 300, 300]]
+    msg = '#'
+    for element in test_data:
+        msg = msg + str(element) + '|'
+    return msg[:-1]
 
 
 def main():
