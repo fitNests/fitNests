@@ -7,11 +7,10 @@ import socket
 import threading
 
 import base64
-import pandas as pd
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
-MESSAGE_SIZE = 24 # position, action, delay, (xyzypr + timestamp) * 3
+MESSAGE_SIZE = 7  # position, action, delay, [xyzypr] * 3
 
 
 class Server(threading.Thread):
@@ -48,9 +47,7 @@ class Server(threading.Thread):
         decrypted_message = bytes(decrypted_message[1:], 'utf8').decode('utf8')
 
         msg = decrypted_message.split('|')
-        headers = ['position', 'action', 'delay', 'x1', 'y1', 'z1', 'yaw1', 'pitch1', 'roll1', 'timestamp1',
-                   'x2', 'y2', 'z2', 'yaw2', 'pitch2', 'roll2', 'timestamp2',
-                   'x3', 'y3', 'z3', 'yaw3', 'pitch3', 'roll3', 'timestamp3']
+        headers = ['id', 'position', 'action', 'delay', 'user1', 'user2', 'user3']
         data = dict(zip(headers, msg))
         return data
     
@@ -82,6 +79,15 @@ class Server(threading.Thread):
     def stop(self):
         self.connection.close()
         self.shutdown.set()
+
+
+def construct_message():
+    test_data = ['stream', '1 2 3', 'hair', 100, [1, 1, 1, 100, 100, 100], [2, 2, 2, 200, 200, 200],
+                 [3, 3, 3, 300, 300, 300]]
+    msg = '#'
+    for element in test_data:
+        msg = msg + str(element) + '|'
+    return msg[:-1]
 
 
 def main():
