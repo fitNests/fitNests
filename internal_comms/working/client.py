@@ -50,8 +50,8 @@ lock = threading.Lock()
 #Debugging
 printRawData = 0
 printError = 0
-printGoodData = 0
-printSummary = 0
+printGoodData = 1
+printSummary = 1
 
 #Set to 1 send to socket!
 clientFlag = 0
@@ -192,9 +192,9 @@ class BufferHandler():
             return False
         elif len(data) == 1 and data[0] == 'A': #Acknowledge handshake packet
             self.isAcknowledged = True
-            return True
+            return HANDSHAKE_FLAG
         elif len(data) == PACKET_SIZE and self.getChksum(data[PACKET_SIZE-1]) == self.xor(data[:PACKET_SIZE-1]): #Check valid checksum (int==int)
-            return True
+            return GOOD_DATA_FLAG
         return False
     
     # Function to validate if packet needs buffering or isComplete
@@ -202,7 +202,7 @@ class BufferHandler():
         #Accepts either 1) 'A'(for handshaking) or 2) Valid packets(checksum)
         if self.checkValidity(data):
             self.bufferQueue = ''
-            return True
+            return GOOD_DATA_FLAG
         #If check fails, do buffering since data is either: 1) incomplete or 2) overflows
         if self.isAcknowledged:
             #Filter out nonsense bytes
@@ -281,7 +281,7 @@ class BufferHandler():
                 #Returns true if current assembledString is valid
                 if self.checkValidity(assembledString):
                     self.buffer = assembledString
-                    return True
+                    return GOOD_DATA_FLAG
         return False
 
 """
@@ -304,6 +304,11 @@ class NotificationDelegate(DefaultDelegate):
                 with open(f"laptopdata{self.number}.txt", "a") as text_file:
                     print(f"        D:{data} ({self.msgCount})", file=text_file)
             flag = self.bH.checkValidity(data)
+            if flag == HANDSHAKE_FLAG:
+                if printGoodData:
+                    with open(f"laptopdata{self.number}.txt", "a") as text_file:
+                        print(f"D:{data}, HANDSHAKE! ({self.msgCount})", file=text_file)
+                return
             if self.bH.isCompleteBuffer(data, self.msgCount):
                 self.goodPacketCount += 1
                 deviceId = None
@@ -322,17 +327,18 @@ class NotificationDelegate(DefaultDelegate):
                     # Prints individual report
                     # Device:number,flag,deviceID:data |total|goodPacketCount|goodPacketsArm|goodPacketsBody
                 '''
-                if self.msgCount > 1:
-                    # Convert from base30 to decimal, accepts only PACKET_SIZE data (will ignore last checksum byte)
-                    data = self.bH.convertToDecimal(data)
-                    if clientFlag:
-                        convertAndSendData(data, deviceId)
+                
+                # Convert from base30 to decimal, accepts only PACKET_SIZE data (will ignore last checksum byte)
+                data = self.bH.convertToDecimal(data)
+                if clientFlag:
+                    convertAndSendData(data, deviceId)
                 #For debugging purposes [good packets]
                 if printGoodData:
                     with open(f"laptopdata{self.number}.txt", "a") as text_file:
                         print(f"{self.number},{flag} [{deviceId}: {data}] ({self.goodPacketsArm}|{self.goodPacketsBody}|{self.goodPacketCount}|{self.msgCount})", file=text_file)
             
             #For debugging purposes (Prints every 5s) [Throughput]
+            ### Send preprocessed data every 5s
             if time() - self.pastTime >= 5:
                 tt = time() - self.baseTime
                 print(f"---{self.number}: {tt}s have passed ---")
@@ -344,6 +350,10 @@ class NotificationDelegate(DefaultDelegate):
                         print(f"\n*** {tt}s have passed ***\n", file=text_file)
                 self.pastTime = time()
                 self.msgCount = self.goodPacketCount = self.goodPacketsArm = self.goodPacketsBody = 0
+                
+                #Send csv file
+                #if client
+                
         except:
             #Error decoding using UTF-8
             print('Decode error')
