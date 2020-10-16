@@ -3,6 +3,7 @@
 
 unsigned long previous_timeB = 0;
 long count = 0;
+volatile bool start_handshake_flag = false;
 volatile bool handshake_flag = false;
 char buff[20];
 
@@ -54,21 +55,27 @@ void setup() {
 
 //Task to check handshake with laptop
 void checkHandshake() {
-  if (!handshake_flag && Serial.available()) {
+  if (!start_handshake_flag && Serial.available()) {
     if (Serial.read() == 'H') {
       buff[0] = 'A';
       Serial.print(buff);
       handshake_flag = true;
       delay(50);
       memset(buff, 0, 20);
+      start_handshake_flag = true;
     }
-  }  
+  }
+  if (start_handshake_flag && Serial.available()) {
+    if (Serial.read() == 'A') {
+      handshake_flag = true;
+    }
+  }
 }
 
 //Task to send 2nd array of values (from body sensor) ~5-10Hz
 void sendBodyData() {
     //Send body sensor
-  if (handshake_flag && (millis() - previous_timeB >= 81UL) ) {
+  if (handshake_flag) {
     int i = 1;
     char temp[4];
     for (int j = 0; j < 6; j++) {
@@ -83,8 +90,7 @@ void sendBodyData() {
     
     Serial.print(buff);
     memset(buff, 0, 20);
-    delay(13);
-    previous_timeB = millis();
+//    previous_timeB = millis();
     
     //For dummy values --CAN REMOVE
     arr[0] = (arr[0] + 1)%10;
@@ -94,4 +100,5 @@ void sendBodyData() {
 void loop() {
   checkHandshake();
   sendBodyData();
+  delay(30);
 }

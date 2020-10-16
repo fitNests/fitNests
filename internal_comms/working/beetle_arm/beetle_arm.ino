@@ -3,6 +3,7 @@
 
 unsigned long previous_timeA = 0;
 long count = 0;
+volatile bool start_handshake_flag = false;
 volatile bool handshake_flag = false;
 char buff[20];
 
@@ -54,21 +55,27 @@ void setup() {
 
 //Task to check handshake with laptop
 void checkHandshake() {
-  if (!handshake_flag && Serial.available()) {
+  if (!start_handshake_flag && Serial.available()) {
     if (Serial.read() == 'H') {
       buff[0] = 'A';
       Serial.print(buff);
       handshake_flag = true;
       delay(50);
       memset(buff, 0, 20);
+      start_handshake_flag = true;
     }
-  }  
+  }
+  if (start_handshake_flag && Serial.available()) {
+    if (Serial.read() == 'A') {
+      handshake_flag = true;
+    }
+  }
 }
 
 //Task to send 1st array of values (from arm sensor) ~15-20Hz
 void sendArmData() {
   //Send arm sensor
-  if (handshake_flag && (millis() - previous_timeA >= 30UL) ) {
+  if (handshake_flag) {
     int i = 0;
     char temp[4];
     for (int j = 0; j < 6; j++) {
@@ -83,8 +90,7 @@ void sendArmData() {
     
     Serial.print(buff);
     memset(buff, 0, 20);
-    delay(15);
-    previous_timeA = millis();
+//    previous_timeA = millis();
     
     //For dummy values --CAN REMOVE
     arr[0] = (arr[0] + 1)%10;
@@ -94,4 +100,5 @@ void sendArmData() {
 void loop() {
   checkHandshake();
   sendArmData();
+  delay(30);
 }
