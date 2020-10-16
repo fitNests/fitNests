@@ -26,7 +26,7 @@ Password: <Your SoC password>
 (For running main client code)
 Run: (On VMBOX)
 cd ~/shared/BLE_comms1_code/working
-sudo python3 ble_client.py
+sudo python3 client.py
 
 
 ################################################################################################
