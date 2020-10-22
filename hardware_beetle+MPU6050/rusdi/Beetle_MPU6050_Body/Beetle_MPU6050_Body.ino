@@ -1,9 +1,11 @@
+
+
 // class default I2C address is 0x68
 // AD0 low = 0x68
 // AD0 high = 0x69
 
 //Binding address
-//0xC8DF84FE3FF4
+// 0x2CAB33CC6AF6
 
 // declare static variables
 #define OUTPUT_READABLE_WORLDACCEL
@@ -45,6 +47,7 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 volatile long dataSaved[3] = {0, 0, 0};
 volatile float dataGyro[3] = {0, 0, 0};
 int arr[6] = {0, 0, 0, 0, 0, 0};
+int arr1[6] = {0, 19, 20, -123, -13500, 13499};
 
 volatile long accel_start[3] = {0, 0, 0};
 volatile long accel_end[3] = {0, 0, 0};
@@ -58,6 +61,8 @@ volatile long yawDiff = 0;
 volatile long pitchDiff = 0;
 volatile long rollDiff = 0;
 
+volatile bool sendFlag = false;
+
 // indicates whether MPU interrupt pin has gone high
 volatile bool mpuInterrupt = false;
 
@@ -68,6 +73,7 @@ volatile bool mpuInterrupt = false;
 unsigned long previous_timeA = 0;
 unsigned long previous_timeB = 0;
 long count = 0;
+volatile bool start_handshake_flag = false;
 volatile bool handshake_flag = false;
 char buff[20];
 
@@ -95,9 +101,9 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
 
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
-    //    mpu.CalibrateAccel(6);
-    //    mpu.CalibrateGyro(6);
-    //    mpu.PrintActiveOffsets();
+//    mpu.CalibrateAccel(6);
+//    mpu.CalibrateGyro(6);
+//    mpu.PrintActiveOffsets();
     // turn on the DMP, now that it's ready
     mpu.setDMPEnabled(true);
 
@@ -115,9 +121,9 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
     // 1 = initial memory load failed
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
-    //    Serial.print(F("DMP Initialization failed (code "));
-    //    Serial.print(devStatus);
-    //    Serial.println(F(")"));
+//    Serial.print(F("DMP Initialization failed (code "));
+//    Serial.print(devStatus);
+//    Serial.println(F(")"));
   }
 
 }
@@ -149,7 +155,7 @@ int loop_single() {
   else if ((mpuIntStatus & (0x01 << MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
     // reset so we can continue cleanly
     mpu.resetFIFO();
-    //    Serial.println(F("FIFO overflow!"));
+//    Serial.println(F("FIFO overflow!"));
 
   } else if (mpuIntStatus & (0x01 << MPU6050_INTERRUPT_DMP_INT_BIT)) {
 
@@ -201,9 +207,9 @@ int loop_single() {
 //compress + computeChecksum gives a 1-byte checksum
 int compress(int num) {
   if (num < 10) {
-    return num;
+      return num;
   }
-  return num % 10 ^ compress(num / 10);
+  return num%10 ^ compress(num/10);
 }
 int computeChecksum(char *s) {
   int output = 0;
@@ -216,19 +222,19 @@ int computeChecksum(char *s) {
 
 //Function to offset raw values by ZERO_OFFSET
 int getOffset(int num) {
-  return (num + ZERO_OFFSET) % (ZERO_OFFSET * 2);
+  return (num + ZERO_OFFSET)%(ZERO_OFFSET*2);
 }
 
 //Function to pad numbers being sad with extra 0s. b: buffer to be padded, s: original numbers
 void setPad(char *b, char *s) {
   int padsize = 3 - strlen(s);
   int startIdx = strlen(b);
-  for (int i = startIdx; i < startIdx + padsize; i++) {
+  for (int i = startIdx; i < startIdx+padsize; i++) {
     b[i] = '0';
   }
   int y = 0;
   startIdx = strlen(b);
-  for (int i = startIdx; i < startIdx + strlen(s); i++) {
+  for (int i = startIdx; i < startIdx+strlen(s); i++) {
     b[i] = s[y++];
   }
 }
@@ -240,7 +246,7 @@ void checkHandshake() {
       Serial.print(buff);
       handshake_flag = true;
       memset(buff, 0, 20);
-      //      delay(50);
+      delay(50);
     }
   }
 }
@@ -248,26 +254,23 @@ void checkHandshake() {
 //Task to send 1st array of values (from arm sensor) ~15-20Hz
 void sendArmData() {
   //Send arm sensor
-  if (handshake_flag) {
+  if (handshake_flag && sendFlag && (millis() - previous_timeA > 35UL)) {
     int i = 0;
     char temp[4];
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i <6; i++) {
       itoa(getOffset((int)arr[i]), temp, BASE_ITOA);
-
+      
       setPad(buff, temp); //copies temp onto buff with pads
 
     }
     int checksumDecimal = computeChecksum(buff);
-    //checksum from 'A' to 'p' for i==0
+    //checksum from 'a' to 'p' for i==0
     buff[18] = checksumDecimal + 'A';
-
+    
     Serial.print(buff);
     memset(buff, 0, 20);
-    //    delay(23);
-    //    previous_timeA = millis();
-    //
-    //    //simulate changing values
-    //    arr[0] = (arr[0] + 1)%10;
+    previous_timeA = millis();
+    arr1[0] = (arr1[0] + 1)%10;
   }
 }
 
@@ -289,6 +292,7 @@ void setup() {
 
   // initialize pins
   setup_accelerometer(mpu, INTERRUPT_PIN);
+  previous_timeA = millis();
 }
 
 void loop() {
@@ -307,7 +311,7 @@ void loop() {
       break;
     }
   }
-  //  delay(50);
+//  delay(50);
 
   while (1) {
     if (loop_single() == 1) {
@@ -320,7 +324,7 @@ void loop() {
       break;
     }
   }
-  //  delay(50);
+//  delay(50);
 
   // Difference between 2 xyz and ypr values to detect sudden movement
   xDiff = accel_end[0] - accel_start[0];
@@ -353,7 +357,8 @@ void loop() {
 
   if ((abs(yawDiff) >= 10 || abs(pitchDiff) >= 10 || abs(rollDiff) >= 10) &&
       (abs(xDiff) >= 150 || abs(yDiff) >= 150 || abs(zDiff) >= 150)) {
-    //    Serial.println("SendData");
+//    Serial.println("SendData");
+    sendFlag = true;
     arr[0] = xDiff;
     arr[1] = yDiff;
     arr[2] = zDiff;
@@ -369,18 +374,18 @@ void loop() {
     arr[5] = 0;
   }
 
-  //  Serial.print("[");
-  //  Serial.print(arr[0]);
-  //  Serial.print(",");
-  //  Serial.print(arr[1]);
-  //  Serial.print(",");
-  //  Serial.print(arr[2]);
-  //  Serial.print(",");
-  //  Serial.print(arr[3]);
-  //  Serial.print(",");
-  //  Serial.print(arr[4]);
-  //  Serial.print(",");
-  //  Serial.print(arr[5]);
-  //  Serial.println("]");
-
+//  Serial.print("[");
+//  Serial.print(arr[0]);
+//  Serial.print(",");
+//  Serial.print(arr[1]);
+//  Serial.print(",");
+//  Serial.print(arr[2]);
+//  Serial.print(",");
+//  Serial.print(arr[3]);
+//  Serial.print(",");
+//  Serial.print(arr[4]);
+//  Serial.print(",");
+//  Serial.print(arr[5]);
+//  Serial.println("]");
+//  delay(40);
 }

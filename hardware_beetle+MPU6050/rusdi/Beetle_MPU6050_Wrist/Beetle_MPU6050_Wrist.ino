@@ -1,3 +1,5 @@
+
+
 // class default I2C address is 0x68
 // AD0 low = 0x68
 // AD0 high = 0x69
@@ -45,6 +47,7 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 volatile long dataSaved[3] = {0, 0, 0};
 volatile float dataGyro[3] = {0, 0, 0};
 int arr[6] = {0, 0, 0, 0, 0, 0};
+int arr1[6] = {0, 19, 20, -123, -13500, 13499};
 
 volatile long accel_start[3] = {0, 0, 0};
 volatile long accel_end[3] = {0, 0, 0};
@@ -58,7 +61,7 @@ volatile long yawDiff = 0;
 volatile long pitchDiff = 0;
 volatile long rollDiff = 0;
 
-bool sendFlag = false;
+volatile bool sendFlag = false;
 
 // indicates whether MPU interrupt pin has gone high
 volatile bool mpuInterrupt = false;
@@ -70,6 +73,7 @@ volatile bool mpuInterrupt = false;
 unsigned long previous_timeA = 0;
 unsigned long previous_timeB = 0;
 long count = 0;
+volatile bool start_handshake_flag = false;
 volatile bool handshake_flag = false;
 char buff[20];
 
@@ -88,12 +92,12 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
   devStatus = mpu.dmpInitialize();
 
   // Offsets and calibrations
-  mpu.setXAccelOffset(-2065);
-  mpu.setYAccelOffset(-6095);
-  mpu.setZAccelOffset(2372);
-  mpu.setXGyroOffset(-87);
-  mpu.setYGyroOffset(-89);
-  mpu.setZGyroOffset(-6);
+  mpu.setXAccelOffset(-950);
+  mpu.setYAccelOffset(1043);
+  mpu.setZAccelOffset(183);
+  mpu.setXGyroOffset(-9);
+  mpu.setYGyroOffset(-4);
+  mpu.setZGyroOffset(54);
 
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
@@ -242,34 +246,31 @@ void checkHandshake() {
       Serial.print(buff);
       handshake_flag = true;
       memset(buff, 0, 20);
-//      delay(50);
+      delay(50);
     }
-  }  
+  }
 }
 
 //Task to send 1st array of values (from arm sensor) ~15-20Hz
 void sendArmData() {
   //Send arm sensor
-  if (handshake_flag && sendFlag == true) {
+  if (handshake_flag && sendFlag && (millis() - previous_timeA > 35UL)) {
     int i = 0;
     char temp[4];
-      for (int i = 0; i <6; i++) {
+    for (int i = 0; i <6; i++) {
       itoa(getOffset((int)arr[i]), temp, BASE_ITOA);
       
       setPad(buff, temp); //copies temp onto buff with pads
 
-      }
+    }
     int checksumDecimal = computeChecksum(buff);
     //checksum from 'a' to 'p' for i==0
     buff[18] = checksumDecimal + 'a';
     
     Serial.print(buff);
     memset(buff, 0, 20);
-//    delay(23);
-//    previous_timeA = millis();
-//    
-//    //simulate changing values
-//    arr[0] = (arr[0] + 1)%10;
+    previous_timeA = millis();
+    arr1[0] = (arr1[0] + 1)%10;
   }
 }
 
@@ -291,6 +292,7 @@ void setup() {
 
   // initialize pins
   setup_accelerometer(mpu, INTERRUPT_PIN);
+  previous_timeA = millis();
 }
 
 void loop() {
@@ -385,5 +387,5 @@ void loop() {
 //  Serial.print(",");
 //  Serial.print(arr[5]);
 //  Serial.println("]");
-
+//  delay(40);
 }
