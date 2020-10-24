@@ -1,9 +1,14 @@
+//RUSDI
+#define IDLE_THRESHOLD 3000
+#define FIRST_THRESHOLD 10000
+#define SECOND_THRESHOLD 1500
+
 // class default I2C address is 0x68
 // AD0 low = 0x68
 // AD0 high = 0x69
 
 //Binding address
-//0xC8DF84FE3FF4
+// 0x2CAB33CC6AF6
 
 // declare static variables
 #define OUTPUT_READABLE_WORLDACCEL
@@ -45,6 +50,7 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 volatile long dataSaved[3] = {0, 0, 0};
 volatile float dataGyro[3] = {0, 0, 0};
 int arr[6] = {0, 0, 0, 0, 0, 0};
+int arr1[6] = {0, 19, 20, -123, -13500, 13499};
 
 volatile long accel_start[3] = {0, 0, 0};
 volatile long accel_end[3] = {0, 0, 0};
@@ -58,6 +64,15 @@ volatile long yawDiff = 0;
 volatile long pitchDiff = 0;
 volatile long rollDiff = 0;
 
+volatile long xTotal = 0;
+
+volatile bool sendFlag = false;
+volatile bool smallStep = false;
+volatile int bodyCount = 0;
+
+//DEBUGGING
+volatile bool debugFlag = false;
+
 // indicates whether MPU interrupt pin has gone high
 volatile bool mpuInterrupt = false;
 
@@ -68,6 +83,7 @@ volatile bool mpuInterrupt = false;
 unsigned long previous_timeA = 0;
 unsigned long previous_timeB = 0;
 long count = 0;
+volatile bool start_handshake_flag = false;
 volatile bool handshake_flag = false;
 char buff[20];
 
@@ -240,7 +256,7 @@ void checkHandshake() {
       Serial.print(buff);
       handshake_flag = true;
       memset(buff, 0, 20);
-      //      delay(50);
+      delay(50);
     }
   }
 }
@@ -248,32 +264,203 @@ void checkHandshake() {
 //Task to send 1st array of values (from arm sensor) ~15-20Hz
 void sendArmData() {
   //Send arm sensor
-  if (handshake_flag) {
+  //  bodyCount += 1;
+  if (handshake_flag && (millis() - previous_timeA > 250UL) ) {
+    //    if (bodyCount%3 == 0) {
+    //      bodyCount = 0;
+    //    }
     int i = 0;
     char temp[4];
+    calculateStep();
+//    if (smallStep == true) {
+//      smallToBigStep();
+//    }
     for (int i = 0; i < 6; i++) {
       itoa(getOffset((int)arr[i]), temp, BASE_ITOA);
 
       setPad(buff, temp); //copies temp onto buff with pads
-
     }
+
     int checksumDecimal = computeChecksum(buff);
-    //checksum from 'A' to 'p' for i==0
+    //checksum from 'a' to 'p' for i==0
     buff[18] = checksumDecimal + 'A';
 
-    Serial.print(buff);
+    if (debugFlag) {
+      Serial.print("Result: ");
+      Serial.println(arr[0]);
+    } else {
+      Serial.print(buff);
+    }
     memset(buff, 0, 20);
-    //    delay(23);
-    //    previous_timeA = millis();
-    //
-    //    //simulate changing values
-    //    arr[0] = (arr[0] + 1)%10;
+    previous_timeA = millis();
+    //    arr1[0] = (arr1[0] + 1) % 10;
   }
 }
 
 // ==================================================
 // ===                 COMMS 1 END                ===
 // ==================================================
+
+/*First iteration - Distinguishing idle, small, big */
+void calculateStep() {
+  int WINDOW_SIZE =17;
+  for (int i = 0; i <= 17; i++) {
+
+    if ((abs(yawDiff) >= 10 || abs(pitchDiff) >= 10 || abs(rollDiff) >= 10) &&
+        (abs(xDiff) >= 150 || abs(yDiff) >= 150 || abs(zDiff) >= 150)) {
+      xTotal = xTotal + xDiff;
+      if (debugFlag) {
+        Serial.print("1st ");
+        Serial.print("xTotal: ");
+        Serial.println(xTotal);
+      }
+
+    }
+    if (i == 17) {
+      // Big step
+      //      if (xTotal >= FIRST_THRESHOLD) {
+      //        smallStep = false;
+      //        //set array
+      //        arr[0] = 2222;
+      //        arr[1] = 2222;
+      //        arr[2] = 2222;
+      //        arr[3] = 2222;
+      //        arr[4] = 2222;
+      //        arr[5] = 2222;
+      //        if (debugFlag) {
+      //          Serial.print("1st iteration");
+      //          Serial.print(" | ");
+      //          Serial.println("2222 Here");
+      //        }
+      //
+      //      }
+      // Small step
+      if (
+        //            (xTotal < FIRST_THRESHOLD) &&
+        (xTotal >= IDLE_THRESHOLD)) {
+        smallStep = true;
+        //set array
+        arr[0] = 1111;
+        arr[1] = 1111;
+        arr[2] = 1111;
+        arr[3] = 1111;
+        arr[4] = 1111;
+        arr[5] = 1111;
+        if (debugFlag) {
+          Serial.print("1st iteration");
+          Serial.print(" | ");
+          Serial.println("1111 Here. Following thru");
+        }
+
+      }
+      // No move
+      else if (xTotal < IDLE_THRESHOLD) {
+        smallStep = false;
+        //set array
+        arr[0] = 0000;
+        arr[1] = 0000;
+        arr[2] = 0000;
+        arr[3] = 0000;
+        arr[4] = 0000;
+        arr[5] = 0000;
+        if (debugFlag) {
+          Serial.print("1st iteration");
+          Serial.print(" | ");
+          Serial.println("IDLE Here");
+        }
+
+      }
+      xTotal = 0;
+    }
+  }
+}
+
+/*Second iteration - Distinguishing small, big */
+void smallToBigStep() {
+  for (int i = 0; i <= 17; i++) {
+
+    accel_start[0] = dataSaved[0];
+    accel_start[1] = dataSaved[1];
+    accel_start[2] = dataSaved[2];
+    ypr_start[0] = dataGyro[0];
+    ypr_start[1] = dataGyro[1];
+    ypr_start[2] = dataGyro[2];
+
+    accel_end[0] = dataSaved[0];
+    accel_end[1] = dataSaved[1];
+    accel_end[2] = dataSaved[2];
+    ypr_end[0] = dataGyro[0];
+    ypr_end[1] = dataGyro[1];
+    ypr_end[2] = dataGyro[2];
+
+    //  delay(50);
+
+    // Difference between 2 xyz and ypr values to detect sudden movement
+    xDiff = accel_end[0] - accel_start[0];
+    yDiff = accel_end[1] - accel_start[1];
+    zDiff = accel_end[2] - accel_start[2];
+    yawDiff = (ypr_end[0] - ypr_start[0]) * 100;
+    pitchDiff = (ypr_end[1] - ypr_start[1]) * 100;
+    rollDiff = (ypr_end[2] - ypr_start[2]) * 100;
+
+    xDiff = abs(xDiff);
+    yDiff = abs(yDiff);
+    zDiff = abs(zDiff);
+    yawDiff = abs(yawDiff);
+    pitchDiff = abs(pitchDiff);
+    rollDiff = abs(rollDiff);
+
+    if ((abs(yawDiff) >= 10 || abs(pitchDiff) >= 10 || abs(rollDiff) >= 10) &&
+        (abs(xDiff) >= 150 || abs(yDiff) >= 150 || abs(zDiff) >= 150)) {
+      xTotal = xTotal + xDiff;
+      if (debugFlag) {
+        Serial.print("2nd ");
+        Serial.print("xTotal: ");
+        Serial.println(xTotal);
+      }
+
+    }
+    if (i == 17) {
+      // Big step
+      if (xTotal >= SECOND_THRESHOLD) {
+        //set array
+        arr[0] = 1111;
+        arr[1] = 1111;
+        arr[2] = 1111;
+        arr[3] = 1111;
+        arr[4] = 1111;
+        arr[5] = 1111;
+        if (debugFlag) {
+          Serial.print("2nd iteration");
+          Serial.print(" | ");
+          Serial.println("2222 Here");
+        }
+
+      }
+
+      // No move
+      if (xTotal < SECOND_THRESHOLD) {
+        //set array
+        arr[0] = 0000;
+        arr[1] = 0000;
+        arr[2] = 0000;
+        arr[3] = 0000;
+        arr[4] = 0000;
+        arr[5] = 0000;
+        if (debugFlag) {
+          Serial.print("2nd iteration");
+          Serial.print(" | ");
+          Serial.println("STILL 1111 Here");
+        }
+
+      }
+
+
+      xTotal = 0;
+    }
+    smallStep = false;
+  }
+}
 
 void setup() {
   // for debugging
@@ -289,11 +476,18 @@ void setup() {
 
   // initialize pins
   setup_accelerometer(mpu, INTERRUPT_PIN);
+  previous_timeA = millis();
+  if (debugFlag) {
+    handshake_flag = true;
+  }
+
 }
 
 void loop() {
+  if (!debugFlag) {
+    checkHandshake();
+  }
 
-  checkHandshake();
   sendArmData();
 
   while (1) {
@@ -350,24 +544,25 @@ void loop() {
   //  Serial.print(",");
   //  Serial.print(dataGyro[2]);
   //  Serial.println("]");
-
-  if ((abs(yawDiff) >= 10 || abs(pitchDiff) >= 10 || abs(rollDiff) >= 10) &&
-      (abs(xDiff) >= 150 || abs(yDiff) >= 150 || abs(zDiff) >= 150)) {
-    //    Serial.println("SendData");
-    arr[0] = xDiff;
-    arr[1] = yDiff;
-    arr[2] = zDiff;
-    arr[3] = yawDiff;
-    arr[4] = pitchDiff;
-    arr[5] = rollDiff;
-  } else {
-    arr[0] = 0;
-    arr[1] = 0;
-    arr[2] = 0;
-    arr[3] = 0;
-    arr[4] = 0;
-    arr[5] = 0;
-  }
+  //
+  //  if ((abs(yawDiff) >= 10 || abs(pitchDiff) >= 10 || abs(rollDiff) >= 10) &&
+  //      (abs(xDiff) >= 150 || abs(yDiff) >= 150 || abs(zDiff) >= 150)) {
+  //    //    Serial.println("SendData");
+  //    sendFlag = true;
+  //    arr[0] = xDiff;
+  //    arr[1] = yDiff;
+  //    arr[2] = zDiff;
+  //    arr[3] = yawDiff;
+  //    arr[4] = pitchDiff;
+  //    arr[5] = rollDiff;
+  //  } else {
+  //    arr[0] = 0;
+  //    arr[1] = 0;
+  //    arr[2] = 0;
+  //    arr[3] = 0;
+  //    arr[4] = 0;
+  //    arr[5] = 0;
+  //  }
 
   //  Serial.print("[");
   //  Serial.print(arr[0]);
@@ -382,5 +577,5 @@ void loop() {
   //  Serial.print(",");
   //  Serial.print(arr[5]);
   //  Serial.println("]");
-
+  //  delay(40);
 }
