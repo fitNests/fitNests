@@ -1,4 +1,7 @@
 //RUSDI
+#define IDLE_THRESHOLD 3000
+#define FIRST_THRESHOLD 10000
+#define SECOND_THRESHOLD 1500
 
 // class default I2C address is 0x68
 // AD0 low = 0x68
@@ -261,17 +264,17 @@ void checkHandshake() {
 //Task to send 1st array of values (from arm sensor) ~15-20Hz
 void sendArmData() {
   //Send arm sensor
-//  bodyCount += 1;
+  //  bodyCount += 1;
   if (handshake_flag && (millis() - previous_timeA > 250UL) ) {
-//    if (bodyCount%3 == 0) {
-//      bodyCount = 0;
-//    }
+    //    if (bodyCount%3 == 0) {
+    //      bodyCount = 0;
+    //    }
     int i = 0;
     char temp[4];
     calculateStep();
-    if (smallStep == true) {
-      smallToBigStep();
-    }
+//    if (smallStep == true) {
+//      smallToBigStep();
+//    }
     for (int i = 0; i < 6; i++) {
       itoa(getOffset((int)arr[i]), temp, BASE_ITOA);
 
@@ -298,8 +301,9 @@ void sendArmData() {
 // ===                 COMMS 1 END                ===
 // ==================================================
 
+/*First iteration - Distinguishing idle, small, big */
 void calculateStep() {
-
+  int WINDOW_SIZE =17;
   for (int i = 0; i <= 17; i++) {
 
     if ((abs(yawDiff) >= 10 || abs(pitchDiff) >= 10 || abs(rollDiff) >= 10) &&
@@ -308,30 +312,32 @@ void calculateStep() {
       if (debugFlag) {
         Serial.print("1st ");
         Serial.print("xTotal: ");
-        Serial.println(xTotal);        
+        Serial.println(xTotal);
       }
 
     }
     if (i == 17) {
       // Big step
-      if (xTotal >= 9000) {
-        smallStep = false;
-        //set array
-        arr[0] = 2222;
-        arr[1] = 2222;
-        arr[2] = 2222;
-        arr[3] = 2222;
-        arr[4] = 2222;
-        arr[5] = 2222;
-        if (debugFlag) {
-          Serial.print("1st iteration");
-          Serial.print(" | ");
-          Serial.println("2222 Here");        
-        }
-
-      }
+      //      if (xTotal >= FIRST_THRESHOLD) {
+      //        smallStep = false;
+      //        //set array
+      //        arr[0] = 2222;
+      //        arr[1] = 2222;
+      //        arr[2] = 2222;
+      //        arr[3] = 2222;
+      //        arr[4] = 2222;
+      //        arr[5] = 2222;
+      //        if (debugFlag) {
+      //          Serial.print("1st iteration");
+      //          Serial.print(" | ");
+      //          Serial.println("2222 Here");
+      //        }
+      //
+      //      }
       // Small step
-      else if ((xTotal < 9000) && (xTotal >= 350)) {
+      if (
+        //            (xTotal < FIRST_THRESHOLD) &&
+        (xTotal >= IDLE_THRESHOLD)) {
         smallStep = true;
         //set array
         arr[0] = 1111;
@@ -343,12 +349,12 @@ void calculateStep() {
         if (debugFlag) {
           Serial.print("1st iteration");
           Serial.print(" | ");
-          Serial.println("1111 Here. Following thru");        
+          Serial.println("1111 Here. Following thru");
         }
 
       }
       // No move
-      else if (xTotal < 350) {
+      else if (xTotal < IDLE_THRESHOLD) {
         smallStep = false;
         //set array
         arr[0] = 0000;
@@ -360,7 +366,7 @@ void calculateStep() {
         if (debugFlag) {
           Serial.print("1st iteration");
           Serial.print(" | ");
-          Serial.println("IDLE Here");        
+          Serial.println("IDLE Here");
         }
 
       }
@@ -369,6 +375,7 @@ void calculateStep() {
   }
 }
 
+/*Second iteration - Distinguishing small, big */
 void smallToBigStep() {
   for (int i = 0; i <= 17; i++) {
 
@@ -409,29 +416,13 @@ void smallToBigStep() {
       if (debugFlag) {
         Serial.print("2nd ");
         Serial.print("xTotal: ");
-        Serial.println(xTotal);        
+        Serial.println(xTotal);
       }
 
     }
     if (i == 17) {
       // Big step
-      if (xTotal >= 1000) {
-        //set array
-        arr[0] = 2222;
-        arr[1] = 2222;
-        arr[2] = 2222;
-        arr[3] = 2222;
-        arr[4] = 2222;
-        arr[5] = 2222;
-        if (debugFlag) {
-          Serial.print("2nd iteration");
-          Serial.print(" | ");
-          Serial.println("2222 Here");        
-        }
-
-      }
-      // No move
-      else if (xTotal < 1000) {
+      if (xTotal >= SECOND_THRESHOLD) {
         //set array
         arr[0] = 1111;
         arr[1] = 1111;
@@ -442,10 +433,29 @@ void smallToBigStep() {
         if (debugFlag) {
           Serial.print("2nd iteration");
           Serial.print(" | ");
+          Serial.println("2222 Here");
+        }
+
+      }
+
+      // No move
+      if (xTotal < SECOND_THRESHOLD) {
+        //set array
+        arr[0] = 0000;
+        arr[1] = 0000;
+        arr[2] = 0000;
+        arr[3] = 0000;
+        arr[4] = 0000;
+        arr[5] = 0000;
+        if (debugFlag) {
+          Serial.print("2nd iteration");
+          Serial.print(" | ");
           Serial.println("STILL 1111 Here");
         }
 
       }
+
+
       xTotal = 0;
     }
     smallStep = false;
@@ -470,14 +480,14 @@ void setup() {
   if (debugFlag) {
     handshake_flag = true;
   }
-  
+
 }
 
 void loop() {
   if (!debugFlag) {
     checkHandshake();
-  } 
-  
+  }
+
   sendArmData();
 
   while (1) {
