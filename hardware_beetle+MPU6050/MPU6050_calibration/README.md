@@ -16,10 +16,15 @@ Before compiling and uploading code to your fitNests set, calibrations has to be
 
 **DO NOT TOUCH THE MPU6050 OR BEETLE DURING THE CALIBRATION** 
 
-5. Once you see the line saying "Calibrations done", take down the 6 values in the serial monitor (x, y, z, yaw, pitch, raw) and place it in your MPU6050_wrist.ino or MPU6050_body.ino code under  <br><br>
-mpu.setXAccelOffset(<"insert your value here">);  
-mpu.setYAccelOffset("insert your value here");  
-mpu.setZAccelOffset("insert your value here");  
-mpu.setXGyroOffset("insert your value here");  
-mpu.setYGyroOffset("insert your value here");  
-mpu.setZGyroOffset("insert your value here");
+5. Once you see the line saying "FINISHED!", take down the 6 values in the serial monitor. It will look something like this "Your offsets:	-1755	1238	1520	-107	2	-23"
+
+Take this values and place it in your MPU6050_Wrist.ino or MPU6050_Ankle.ino code under the functions section.
+
+mpu.setXAccelOffset(-1755);  
+mpu.setYAccelOffset(1238);  
+mpu.setZAccelOffset(1520);  
+mpu.setXGyroOffset(-107);  
+mpu.setYGyroOffset(2);  
+mpu.setZGyroOffset(-23);
+
+Contact Nicholas if you face any issues or doubts.
