@@ -1,4 +1,8 @@
-//Rusdi
+//RUSDI WRIST
+
+// ==================================================
+// ===       LIBRARIES AND DECLARATIONS           ===
+// ==================================================
 
 // class default I2C address is 0x68
 // AD0 low = 0x68
@@ -7,25 +11,21 @@
 //Binding address
 // 0x2CAB33CC6AF6
 
-// declare static variables
 #define OUTPUT_READABLE_WORLDACCEL
 
-// include libraries
-//#include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-#include "Wire.h"
+#   include "Wire.h"
 #endif
-//#include "Wire.h"
 
-// declare addresses for both accelerometers
+// Declare addresses for both accelerometers
 MPU6050 mpu(0x68);  //AD0 low
 
-// declare pins
+// Declare pins
 const int INTERRUPT_PIN = 2;
 const int LED_PIN = 13;
 
-// declare variables
+// Declare variables
 bool blinkState = false;
 bool dmpReady = false;  // set true if DMP init was successful
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
@@ -34,7 +34,7 @@ uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;     // count of all bytes currently in FIFO
 uint8_t fifoBuffer[64]; // FIFO storage buffer
 
-// orientation/motion vars - following libraries
+// Orientation/motion vars - following libraries
 Quaternion q;           // [w, x, y, z]         quaternion container
 VectorInt16 aa;         // [x, y, z]            accel sensor measurements
 VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
@@ -49,6 +49,7 @@ volatile float dataGyro[3] = {0, 0, 0};
 int arr[6] = {0, 0, 0, 0, 0, 0};
 int arr1[6] = {0, 19, 20, -123, -13500, 13499};
 
+// For denoising and sampling
 volatile long accel_start[3] = {0, 0, 0};
 volatile long accel_end[3] = {0, 0, 0};
 volatile float ypr_start[3] = {0.0, 0.0, 0.0};
@@ -63,10 +64,10 @@ volatile long rollDiff = 0;
 
 volatile bool sendFlag = false;
 
-// indicates whether MPU interrupt pin has gone high
+// Indicates whether MPU interrupt pin has gone high
 volatile bool mpuInterrupt = false;
 
-// comms 1 declarations
+// Comms 1 declarations
 #define BASE_ITOA 30
 #define ZERO_OFFSET 13500
 
@@ -77,12 +78,16 @@ volatile bool start_handshake_flag = false;
 volatile bool handshake_flag = false;
 char buff[20];
 
+// ==================================================
+// ===                  FUNCTIONS                 ===
+// ==================================================
 
 // DMP (Digital Motion Processor) to take values
 void dmpDataReady() {
   mpuInterrupt = true;
 }
 
+// Initialise MPU6050
 void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
   // start mpu
   mpu.initialize();
@@ -101,9 +106,9 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
 
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
-//    mpu.CalibrateAccel(6);
-//    mpu.CalibrateGyro(6);
-//    mpu.PrintActiveOffsets();
+    //    mpu.CalibrateAccel(6);
+    //    mpu.CalibrateGyro(6);
+    //    mpu.PrintActiveOffsets();
     // turn on the DMP, now that it's ready
     mpu.setDMPEnabled(true);
 
@@ -121,14 +126,13 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
     // 1 = initial memory load failed
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
-//    Serial.print(F("DMP Initialization failed (code "));
-//    Serial.print(devStatus);
-//    Serial.println(F(")"));
+    //    Serial.print(F("DMP Initialization failed (code "));
+    //    Serial.print(devStatus);
+    //    Serial.println(F(")"));
   }
-
 }
 
-// followed libraries test units
+// Followed libraries test units - continuously taking xyz,ypr
 int loop_single() {
   // if programming failed, don't try to do anything
   if (!dmpReady) return;
@@ -148,21 +152,16 @@ int loop_single() {
   // get current FIFO count
   fifoCount = mpu.getFIFOCount();
 
-  if (fifoCount < packetSize) {
-
-  }
-
   else if ((mpuIntStatus & (0x01 << MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
     // reset so we can continue cleanly
     mpu.resetFIFO();
-//    Serial.println(F("FIFO overflow!"));
+    //    Serial.println(F("FIFO overflow!"));
 
   } else if (mpuIntStatus & (0x01 << MPU6050_INTERRUPT_DMP_INT_BIT)) {
-
+    // packet handling
     while (fifoCount >= packetSize) {
       mpu.getFIFOBytes(fifoBuffer, packetSize);
       fifoCount -= packetSize;
-
     }
 
     // for gravity and accelerometer values
@@ -197,8 +196,6 @@ int loop_single() {
   // blink LED to indicate activity
   blinkState = !blinkState;
   digitalWrite(LED_PIN, blinkState);
-
-
 }
 
 // ==================================================
@@ -207,9 +204,9 @@ int loop_single() {
 //compress + computeChecksum gives a 1-byte checksum
 int compress(int num) {
   if (num < 10) {
-      return num;
+    return num;
   }
-  return num%10 ^ compress(num/10);
+  return num % 10 ^ compress(num / 10);
 }
 int computeChecksum(char *s) {
   int output = 0;
@@ -222,19 +219,19 @@ int computeChecksum(char *s) {
 
 //Function to offset raw values by ZERO_OFFSET
 int getOffset(int num) {
-  return (num + ZERO_OFFSET)%(ZERO_OFFSET*2);
+  return (num + ZERO_OFFSET) % (ZERO_OFFSET * 2);
 }
 
 //Function to pad numbers being sad with extra 0s. b: buffer to be padded, s: original numbers
 void setPad(char *b, char *s) {
   int padsize = 3 - strlen(s);
   int startIdx = strlen(b);
-  for (int i = startIdx; i < startIdx+padsize; i++) {
+  for (int i = startIdx; i < startIdx + padsize; i++) {
     b[i] = '0';
   }
   int y = 0;
   startIdx = strlen(b);
-  for (int i = startIdx; i < startIdx+strlen(s); i++) {
+  for (int i = startIdx; i < startIdx + strlen(s); i++) {
     b[i] = s[y++];
   }
 }
@@ -257,25 +254,29 @@ void sendArmData() {
   if (handshake_flag && sendFlag && (millis() - previous_timeA > 35UL)) {
     int i = 0;
     char temp[4];
-    for (int i = 0; i <6; i++) {
+    for (int i = 0; i < 6; i++) {
       itoa(getOffset((int)arr[i]), temp, BASE_ITOA);
-      
+
       setPad(buff, temp); //copies temp onto buff with pads
 
     }
     int checksumDecimal = computeChecksum(buff);
     //checksum from 'a' to 'p' for i==0
     buff[18] = checksumDecimal + 'a';
-    
+
     Serial.print(buff);
     memset(buff, 0, 20);
     previous_timeA = millis();
-    arr1[0] = (arr1[0] + 1)%10;
+    arr1[0] = (arr1[0] + 1) % 10;
   }
 }
 
 // ==================================================
 // ===                 COMMS 1 END                ===
+// ==================================================
+
+// ==================================================
+// ===           MAIN SETUP AND LOOP              ===
 // ==================================================
 
 void setup() {
@@ -311,7 +312,7 @@ void loop() {
       break;
     }
   }
-//  delay(50);
+  //  delay(50);
 
   while (1) {
     if (loop_single() == 1) {
@@ -324,7 +325,7 @@ void loop() {
       break;
     }
   }
-//  delay(50);
+  //  delay(50);
 
   // Difference between 2 xyz and ypr values to detect sudden movement
   xDiff = accel_end[0] - accel_start[0];
@@ -357,7 +358,7 @@ void loop() {
 
   if ((abs(yawDiff) >= 10 || abs(pitchDiff) >= 10 || abs(rollDiff) >= 10) &&
       (abs(xDiff) >= 150 || abs(yDiff) >= 150 || abs(zDiff) >= 150)) {
-//    Serial.println("SendData");
+    //    Serial.println("SendData");
     sendFlag = true;
     arr[0] = xDiff;
     arr[1] = yDiff;
@@ -374,18 +375,18 @@ void loop() {
     arr[5] = 0;
   }
 
-//  Serial.print("[");
-//  Serial.print(arr[0]);
-//  Serial.print(",");
-//  Serial.print(arr[1]);
-//  Serial.print(",");
-//  Serial.print(arr[2]);
-//  Serial.print(",");
-//  Serial.print(arr[3]);
-//  Serial.print(",");
-//  Serial.print(arr[4]);
-//  Serial.print(",");
-//  Serial.print(arr[5]);
-//  Serial.println("]");
-//  delay(40);
+  //  Serial.print("[");
+  //  Serial.print(arr[0]);
+  //  Serial.print(",");
+  //  Serial.print(arr[1]);
+  //  Serial.print(",");
+  //  Serial.print(arr[2]);
+  //  Serial.print(",");
+  //  Serial.print(arr[3]);
+  //  Serial.print(",");
+  //  Serial.print(arr[4]);
+  //  Serial.print(",");
+  //  Serial.print(arr[5]);
+  //  Serial.println("]");
+  //  delay(40);
 }
