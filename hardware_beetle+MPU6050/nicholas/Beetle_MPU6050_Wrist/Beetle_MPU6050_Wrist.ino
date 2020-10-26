@@ -1,4 +1,4 @@
-//NICHOLAS WRIST
+//NICHOLAS WRIST - RED STRAP
 
 // ==================================================
 // ===       LIBRARIES AND DECLARATIONS           ===
@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x2CAB33CC6AF6
+// 0xC8DF84FE522B
 
 #define OUTPUT_READABLE_WORLDACCEL
 

@@ -1,4 +1,4 @@
-//NICHOLAS ANKLE
+//NICHOLAS ANKLE - GREEN STRAP
 
 // ==================================================
 // ===       LIBRARIES AND DECLARATIONS           ===
@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x2CAB33CC6AF6
+// 0x34151322966F
 
 // declare static variables
 #define OUTPUT_READABLE_WORLDACCEL
