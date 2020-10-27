@@ -1,4 +1,4 @@
-//CLAIRE ANKLE
+//CLAIRE ANKLE - GREEN
 
 // ==================================================
 // ===       LIBRARIES AND DECLARATIONS           ===
@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x2CAB33CC6AF6
+//OX2CAB33CC6AF6
 
 // declare static variables
 #define OUTPUT_READABLE_WORLDACCEL

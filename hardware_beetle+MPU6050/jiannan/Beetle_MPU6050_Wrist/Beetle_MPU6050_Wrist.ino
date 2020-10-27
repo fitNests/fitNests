@@ -1,4 +1,4 @@
-//JIANNAN WRIST
+//JIANNAN WRIST - RED
 
 // ==================================================
 // ===       LIBRARIES AND DECLARATIONS           ===
@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x2CAB33CC6AF6
+// 0xF830020914A9
 
 #define OUTPUT_READABLE_WORLDACCEL
 

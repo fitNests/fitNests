@@ -1,4 +1,4 @@
-//RUSDI WRIST
+//RUSDI WRIST - RED
 
 // ==================================================
 // ===       LIBRARIES AND DECLARATIONS           ===
@@ -9,7 +9,8 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x2CAB33CC6AF6
+//0XF8300208E2B5
+
 
 #define OUTPUT_READABLE_WORLDACCEL
 

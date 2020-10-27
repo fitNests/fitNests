@@ -1,4 +1,4 @@
-//NICHOLAS ANKLE - GREEN STRAP
+//NICHOLAS ANKLE - GREEN
 
 // ==================================================
 // ===       LIBRARIES AND DECLARATIONS           ===

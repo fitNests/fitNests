@@ -1,4 +1,4 @@
-//CLAIRE WRIST
+//CLAIRE WRIST - RED
 
 // ==================================================
 // ===       LIBRARIES AND DECLARATIONS           ===
@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x2CAB33CC6AF6
+// 0x2CAB33CC6CAD
 
 #define OUTPUT_READABLE_WORLDACCEL
 

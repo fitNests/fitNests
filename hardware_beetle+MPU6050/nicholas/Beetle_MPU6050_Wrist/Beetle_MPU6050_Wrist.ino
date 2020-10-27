@@ -1,4 +1,4 @@
-//NICHOLAS WRIST - RED STRAP
+//NICHOLAS WRIST - RED
 
 // ==================================================
 // ===       LIBRARIES AND DECLARATIONS           ===
