@@ -1,0 +1,57 @@
+### Guide for 'How to get BLE to transfer data to laptop using Linux OS and Bluepy library'?
+
+# Step 1 - Downloading Oracle VirtualBox + Ubuntu (10GB+) [IF YOU ARE DUAL-BOOTING, SKIP STEPS 1-2]
+Ref: https://itsfoss.com/install-linux-in-virtualbox/
+//Follow steps outlined in article, recommended to download Ubuntu ver 18.04 or later.
+
+*If err: AMD-V is disabled in the BIOS,
+*then activate it in your BIOS settings first. (Shutdown + F9/10/11/12 key depending on system)
+
+# Step 2 - Guest Additions (NEEDED for transfer of files AND BLUETOOTH!!!)
+a) Installing Guest Additions
+Ref: https://itsfoss.com/virtualbox-guest-additions-ubuntu/
+
+b) Making shared folder between main host(your Windows) and guest host(your VM/Ubuntu)
+Ref: https://gist.github.com/estorgio/0c76e29c0439e683caca694f338d4003 (18.04+)
+
+'''
+Note 1: Make sure your Network Adapter is using "Bridged" for port forwarding.
+Note 2: Need to manually enable Bluetooth everytime Ubuntu is booted from the VirtualBox, goto drop-down menu
+        "Devices -> USB -> (YOUR_BLUETOOTH_DEVICE_HERE)"
+*If not displaying your laptop's Bluetooth device/driver, your laptop's Bluetooth driver MIGHT NOT BE COMPATIBLE with VMBox.
+*May need to buy Bluetooth dongle... (GBU851)
+'''
+
+# Step 3 - Setting up the environment for running Bluepy (On your VMBox)
+Ref: https://github.com/IanHarvey/bluepy
+
+a) Install pip3 (for python3, cos fk python2...)
+For python3:
+    `sudo apt update`
+    `sudo apt install python3-pip`
+    
+//When the installation is complete, verify the installation by checking the pip version:
+    `pip3 --version`
+    
+b) Install Dependencies for Bluepy
+`sudo apt-get install libglib2.0-dev`
+`sudo pip3 install bluepy`
+// Check that bluepy is installed by typing in 'pip3 freeze' and scrolling up till you spot Bluepy with its version number
+
+c) [Claire's side] Install Pycryptodome for Encrypted communications for external comms
+`sudo pip3 install pycryptodome`
+
+*It is important that you do not install any other crypto libraries that are not already pre-installed, else build might break...
+
+d) [Jiannan's side] Install pandas and scipy for ML preprocessing
+`sudo pip3 install pandas`
+`sudo pip3 install scipy`
+
+###
+Now all the necessary libraries should be installed, py program ready to be run on laptop!
+
+a) Clone the fitNests github repo
+`git clone https://github.com/fitNests/fitNests.git`
+
+b) Look at README.txt for more info
+    

@@ -1,0 +1,8 @@
+# "c8:df:84:fe:52:2b":4,#Rusdi wrist            
+# "f8:30:02:08:e5:e3":5, #Rusdi leg
+# "f8:30:02:09:14:a9":6, #Jiannan wrist
+# "c8:df:84:fe:3f:f4":7, #Jiannan leg
+# "2c:ab:33:cc:6a:f6":8, #Claire wrist
+# "2c:ab:33:cc:6c:ad":9, #Claire leg
+# "f8:30:02:08:e2:b5":1, #Nic wrist
+# "34:15:13:22:96:6f":2  #Nic leg
