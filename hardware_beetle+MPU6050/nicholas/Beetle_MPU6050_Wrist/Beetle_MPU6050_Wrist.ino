@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0xC8DF84FE522B
+//0XF8300208E2B5
 
 #define OUTPUT_READABLE_WORLDACCEL
 
@@ -152,6 +152,9 @@ int loop_single() {
   // get current FIFO count
   fifoCount = mpu.getFIFOCount();
 
+  if (fifoCount < packetSize) {
+  // no error
+  }
   else if ((mpuIntStatus & (0x01 << MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
     // reset so we can continue cleanly
     mpu.resetFIFO();
