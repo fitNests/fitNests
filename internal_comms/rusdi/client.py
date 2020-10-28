@@ -1,8 +1,39 @@
+'''
+CHANGE YOUR DANCER_ID HERE!
+'''
+#Dancers a,b,c = '0','1','2'
+DANCER_ID = '0'
+
+#Set to 1 send to socket!
+clientFlag = 0
+preprocessFlag = 1
+
+# bt_addrs = {
+# "c8:df:84:fe:52:2b":4,#Rusdi wrist            
+# "f8:30:02:08:e5:e3":5, #Rusdi leg
+# "f8:30:02:09:14:a9":6, #Jiannan wrist
+# "c8:df:84:fe:3f:f4":7, #Jiannan leg
+# "2c:ab:33:cc:6a:f6":8, #Claire wrist
+# "50:65:83:6f:54:16":9, #Claire leg
+# "f8:30:02:08:e2:b5":1, #Nic wrist
+# "34:15:13:22:96:6f":2  #Nic leg
+
+# }
+
+bt_addrs = {
+"c8:df:84:fe:52:2b":4,#Rusdi wrist            
+"f8:30:02:08:e5:e3":5 #Rusdi leg
+            }
+
+#############################################
+
 import sys
 import threading
 import re
 import socket
 import random
+import ntplib
+import datetime
 
 #Preprocessing script
 import pandas as pd
@@ -28,11 +59,7 @@ from random import uniform,randint
 # from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 # import joblib
 
-'''
-CHANGE YOUR DANCER_ID HERE!
-'''
-#Dancers a,b,c = '0','1','2'
-DANCER_ID = '0'
+
 
 #Packet Type to send to FPGA_Server
 ML_PACKET_TYPE = '0' #Packet: ML dance move
@@ -47,10 +74,6 @@ printRawData = 0
 printError = 0
 printGoodData = 0
 printSummary = 0
-
-#Set to 1 send to socket!
-clientFlag = 1
-preprocessFlag = 1
 
 #Set conversion from base30 to decimal
 decimalConvert = 1
@@ -95,22 +118,7 @@ SPECIAL_BIG_STEP = "2222,2222,2222,2222,2222,2222"
 '''
 
 
-# bt_addrs = {
-# "c8:df:84:fe:52:2b":4,#Rusdi wrist            
-# "f8:30:02:08:e5:e3":5, #Rusdi leg
-# "f8:30:02:09:14:a9":6, #Jiannan wrist
-# "c8:df:84:fe:3f:f4":7, #Jiannan leg
-# "2c:ab:33:cc:6a:f6":8, #Claire wrist
-# "50:65:83:6f:54:16":9, #Claire leg
-# "f8:30:02:08:e2:b5":1, #Nic wrist
-# "34:15:13:22:96:6f":2  #Nic leg
 
-# }
-
-bt_addrs = {
-"c8:df:84:fe:52:2b":4,#Rusdi wrist            
-"f8:30:02:08:e5:e3":5 #Rusdi leg
-            }
             
 #Sets all addresses to "not connected"
 bt_addrs_isConnected = {}
@@ -135,6 +143,9 @@ outputBuffer = []
 #ML stuff
 ACTIONS = ['','hair','rocket','zigzag']
 
+#Timestamp
+ntpclient = ntplib.NTPClient()
+bufferTimestamp = None
 
 ###
 
@@ -175,6 +186,12 @@ def convertAndSendData(dataString, deviceId):
     # print(ls)
     client.send_data(msgList)
 
+def getSeconds(dateInstance):
+    dt_obj = datetime.datetime.strptime(str(dateInstance),'%Y-%m-%d %H:%M:%S.%f')
+    millisec = int(dt_obj.timestamp() * 1000)
+    print('Timestamp:', millisec)
+    return millisec
+
 '''
     Class to generate preprocessing data
 '''
@@ -188,6 +205,7 @@ class PreprocessorThread(threading.Thread):
     
     def run(self):
         global outputBuffer
+        global bufferTimestamp
         while time() - self.startTime <= 5:
             # Block till initial setup time reached
             pass
@@ -196,6 +214,9 @@ class PreprocessorThread(threading.Thread):
         while True:
             #Check if outputBuffer size == 90, then start to send to 'client'
             if len(outputBuffer) >= WINDOW_SIZE:
+                response = ntpclient.request('sg.pool.ntp.org')
+                dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+                bufferTimestamp = getSeconds(dateInstance)
                 self.processCount += 1
                 print(f"\nWindow size of {WINDOW_SIZE} is fulfilled! COUNT: {self.processCount}. Preprocessing...\n")
                 self.runPreprocessor()
@@ -346,8 +367,15 @@ class Client():
         server_address = (ip_address, port_num)
         self.sock.connect(server_address)
         self.secret_key = str(secret_key).encode('utf8')
+        
+        
+        #Send initial timestamp
+        self.calibration()
+        
+        
         print(f"ULTRA96 client is connected to Ultra96 through: {ip_address}:{port_num}")
-
+    
+    
     '''
     msg str format is : '#[deviceID]|[x]|[y]|[z]|[y]|[p]|[r]|[timestamp]'
     timestamp can be some int if not using
@@ -356,10 +384,20 @@ class Client():
     '''
     def send_data(self, msg, packetType):
         msgToSend = packetType + ':' + DANCER_ID + ':' + msg
+        if packetType == ML_PACKET_TYPE:
+            msgToSend += ':' + str(bufferTimestamp)
         to_send = self.encrypt_message(msgToSend)
         # print("to send:", to_send)
         
         self.sock.sendall(to_send)
+
+    def calibration(self):
+        global ntpclient
+        first = self.sock.recv(1024).decode("utf8")
+        recv_time = getSeconds(datetime.datetime.fromtimestamp(ntpclient.request('sg.pool.ntp.org').tx_time))
+        to_return = first + str(recv_time) + '|' + \
+                    str(getSeconds(datetime.datetime.fromtimestamp(ntpclient.request('sg.pool.ntp.org').tx_time))) + '|' + DANCER_ID
+        self.sock.sendall(to_return.encode("utf8"))
         
 
     def stop(self):
@@ -583,6 +621,7 @@ class NotificationDelegate(DefaultDelegate):
     
     def positionOrPreprocessCode(self, data):
         global client
+        global outputBuffer
         #Body-beetle code
         if self.deviceId == 1:
             # #Check for position. CHECK IF SMALL STEP OR BIG STEP
@@ -649,6 +688,7 @@ class NotificationDelegate(DefaultDelegate):
                             self.idleCount = -8 #waits around 1.6s before can move again
                             self.promptFlag = 1
                             print(f"Tt for moving positions: {round(time()-self.startMovePostTime, 3)}s")
+                            outputBuffer = []
             
             if clientFlag and moveType is not None:
                 client.send_data(moveType, POSITION_PACKET_TYPE)
@@ -933,6 +973,23 @@ def run():
                 totalDevicesConnected += 1
             except: #Raised when unable to create connection
                 print('Error in connecting device')
+                
+    # for addr in bt_addrs:
+        # if bt_addrs_isConnected[addr]:
+            # continue
+        # idx = bt_addrs[addr]
+        # bt_addrs_isConnected[addr] = True
+        # print(addr, 'found!')
+        # try:
+            # p = Peripheral(addr)
+            # connections[idx] = p
+            # t = ConnectionHandlerThread(idx)
+            # t.daemon = True #Set to true so can CTRL-C the program easily
+            # t.start()
+            # connection_threads[idx] = t
+            # totalDevicesConnected += 1
+        # except: #Raised when unable to create connection
+            # print('Error in connecting device')
     if preprocessFlag:
         ppT = PreprocessorThread(time())
         ppT.daemon = True
