@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-//OX5065836F5416
+//0XF8300208E2B5
 
 // declare static variables
 #define OUTPUT_READABLE_WORLDACCEL

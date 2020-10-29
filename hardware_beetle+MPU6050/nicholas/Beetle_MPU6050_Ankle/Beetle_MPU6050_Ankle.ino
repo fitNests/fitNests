@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x34151322966F
+//OX5065836F5416
 
 // declare static variables
 #define OUTPUT_READABLE_WORLDACCEL
@@ -108,12 +108,12 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
   devStatus = mpu.dmpInitialize();
 
   // Offsets and calibrations
-  mpu.setXAccelOffset(-1664);
-  mpu.setYAccelOffset(471);
-  mpu.setZAccelOffset(1353);
-  mpu.setXGyroOffset(-107);
-  mpu.setYGyroOffset(2);
-  mpu.setZGyroOffset(-22);
+  mpu.setXAccelOffset(-967);
+  mpu.setYAccelOffset(-221);
+  mpu.setZAccelOffset(1635);
+  mpu.setXGyroOffset(-263);
+  mpu.setYGyroOffset(137);
+  mpu.setZGyroOffset(36);
 
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
