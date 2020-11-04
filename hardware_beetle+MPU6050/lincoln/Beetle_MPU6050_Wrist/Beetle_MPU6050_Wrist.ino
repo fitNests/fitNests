@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x2CAB33CC6AF6
+// 0x2CAB33CC68FA
 
 #define OUTPUT_READABLE_WORLDACCEL
 
@@ -97,12 +97,12 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
   devStatus = mpu.dmpInitialize();
 
   // Offsets and calibrations
-  mpu.setXAccelOffset(-1211);
-  mpu.setYAccelOffset(-4137);
-  mpu.setZAccelOffset(1382);
-  mpu.setXGyroOffset(248);
-  mpu.setYGyroOffset(-150);
-  mpu.setZGyroOffset(67);
+  mpu.setXAccelOffset(-1590);
+  mpu.setYAccelOffset(3342);
+  mpu.setZAccelOffset(1704);
+  mpu.setXGyroOffset(103);
+  mpu.setYGyroOffset(88);
+  mpu.setZGyroOffset(3);
 
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
@@ -151,7 +151,9 @@ int loop_single() {
 
   // get current FIFO count
   fifoCount = mpu.getFIFOCount();
-
+  if (fifoCount < packetSize) {
+  // no error
+  }
   else if ((mpuIntStatus & (0x01 << MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
     // reset so we can continue cleanly
     mpu.resetFIFO();
