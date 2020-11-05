@@ -972,8 +972,9 @@ if __name__ == "__main__":
             A -> Sends same timestamp, appended to each ML_PACKET_TYPE thereafter for server to process
             '''
             if clientFlag:
-                startOfRoundMsg = self.client.socket.recv(1024)
-                print(startOfRoundMsg)
+                print(f"Main thread waiting for... next round")
+                startOfRoundMsg = client.sock.recv(1024)
+                print(f"\nMain thread got next round signal! {startOfRoundMsg}")
                 outputBuffer = []
                 sleep(1)
                 isStartOfRound = True

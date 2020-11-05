@@ -27,10 +27,10 @@ UPDATE NEW CODE BELOW
             # }
 
 ##Claire
-bt_addrs = {
-"34:15:13:22:a9:be":5, #Claire Wrist
-"f8:30:02:09:17:a4":6, #Claire Ankle
-            }
+# bt_addrs = {
+# "34:15:13:22:a9:be":5, #Claire Wrist
+# "f8:30:02:09:17:a4":6, #Claire Ankle
+            # }
 
 ##Jiannan
 # bt_addrs = {
@@ -39,10 +39,10 @@ bt_addrs = {
             # }
 
 #Umar
-# bt_addrs = {
-# "2c:ab:33:cc:6a:f6":9, #Umar Wrist
-# "2c:ab:33:cc:6a:f6":10, #Umar Ankle 
-            # }
+bt_addrs = {
+"2c:ab:33:cc:6a:f6":9, #Umar Wrist
+"2c:ab:33:cc:6a:f6":10, #Umar Ankle 
+            }
 
 #Lincoln
 # bt_addrs = {
