@@ -8,12 +8,6 @@ DANCER_ID = '0'
 clientFlag = 0
 preprocessFlag = 1
 
-'''
------ ----- ----- ----- 
-UPDATE NEW CODE BELOW
------ ----- ----- ----- 
-'''
-
 #Nic
 # bt_addrs = {
 # "34:15:13:22:96:6f":1, #Nic Wrist
@@ -45,10 +39,10 @@ bt_addrs = {
             # }
 
 #Lincoln
-# bt_addrs = {
-# "2c:ab:33:cc:68:fa":11, #Lincoln Wrist
-# "50:65:83:6f:57:50":12, #Lincoln Ankle
-            # }
+bt_addrs = {
+"2c:ab:33:cc:68:fa":11, #Lincoln Wrist
+"50:65:83:6f:57:50":12, #Lincoln Ankle
+            }
 
 #############################################
 

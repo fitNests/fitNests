@@ -8,23 +8,17 @@ DANCER_ID = '0'
 clientFlag = 0
 preprocessFlag = 1
 
-'''
------ ----- ----- ----- 
-UPDATE NEW CODE BELOW
------ ----- ----- ----- 
-'''
-
 #Nic
-# bt_addrs = {
-# "34:15:13:22:96:6f":1, #Nic Wrist
-# "f8:30:02:08:e2:b5":2, #Nic Ankle
-            # }
+bt_addrs = {
+"34:15:13:22:96:6f":1, #Nic Wrist
+"f8:30:02:08:e2:b5":2, #Nic Ankle
+            }
 
 ##Rusdi
-bt_addrs = {
-"c8:df:84:fe:52:2b":3,#Rusdi wrist            
-"f8:30:02:08:e5:e3":4, #Rusdi leg
-            }
+# bt_addrs = {
+# "c8:df:84:fe:52:2b":3,#Rusdi wrist            
+# "f8:30:02:08:e5:e3":4, #Rusdi leg
+            # }
 
 ##Claire
 # bt_addrs = {
