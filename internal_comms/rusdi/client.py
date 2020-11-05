@@ -20,6 +20,20 @@ preprocessFlag = 1
 
 # }
 
+##Jiannan
+bt_addrs = {
+"f8:30:02:09:14:a9":6, #Jiannan wrist
+"c8:df:84:fe:3f:f4":7, #Jiannan leg
+            }
+
+##
+# bt_addrs = {
+# "50:65:83:6f:54:16":9, #Claire/nic
+# "34:15:13:22:96:6f":2
+
+# }
+
+##Rusdi
 bt_addrs = {
 "c8:df:84:fe:52:2b":4,#Rusdi wrist            
 "f8:30:02:08:e5:e3":5 #Rusdi leg
@@ -147,6 +161,9 @@ ACTIONS = ['','hair','rocket','zigzag']
 ntpclient = ntplib.NTPClient()
 bufferTimestamp = None
 
+#Start of round
+isStartOfRound = False
+
 ###
 
 # dummy data for test purposes. not even a good one at that
@@ -206,17 +223,38 @@ class PreprocessorThread(threading.Thread):
     def run(self):
         global outputBuffer
         global bufferTimestamp
+        global client
+        global isStartOfRound
         while time() - self.startTime <= 5:
             # Block till initial setup time reached
             pass
         
+        clearToggle = False
+        
         #Run continuously till end of script
         while True:
+            #Blocking call until start of round
+            # msg = client.sock.recv(1024).decode("utf8")
+            # print(msg)
+            
+            # New code
+            #THIS WILL BE SET TO TRUE IF RECEIVED FROM SERVER to DROP
+            if clientFlag and isStartOfRound: 
+                if not clearToggle:
+                    outputBuffer = []
+                    clearToggle = True
+                if len(outputBuffer) > 0:
+                    #start of move
+                    response = ntpclient.request('sg.pool.ntp.org')
+                    dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+                    bufferTimestamp = getSeconds(dateInstance)
+                    isStartOfRound = False
+                    
             #Check if outputBuffer size == 90, then start to send to 'client'
             if len(outputBuffer) >= WINDOW_SIZE:
-                response = ntpclient.request('sg.pool.ntp.org')
-                dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
-                bufferTimestamp = getSeconds(dateInstance)
+                # response = ntpclient.request('sg.pool.ntp.org')
+                # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+                # bufferTimestamp = getSeconds(dateInstance)
                 self.processCount += 1
                 print(f"\nWindow size of {WINDOW_SIZE} is fulfilled! COUNT: {self.processCount}. Preprocessing...\n")
                 self.runPreprocessor()
@@ -624,37 +662,6 @@ class NotificationDelegate(DefaultDelegate):
         global outputBuffer
         #Body-beetle code
         if self.deviceId == 1:
-            # #Check for position. CHECK IF SMALL STEP OR BIG STEP
-            # if data == IDLE_STEP:
-                # self.ignoreIdle -= 1
-                # # self.ignoreStep -= 1
-                # if self.ignoreIdle <= 0:
-                    # # print(f"IDLE!") 
-                    # self.ignoreIdle = 5
-                    # self.idleCount += 1
-            # #For debouncing of classifications (can only classify every 3 'IDLE's ~3s
-            # if self.idleCount > 2:
-                # if self.promptFlag:
-                    # print('Move debouncing off. You may start moving if you so desire')
-                    # self.promptFlag = 0
-                # if not self.startOfOne:
-                    # if data == SPECIAL_SMALL_STEP:
-                        # self.startOfOne = 1
-                    # elif data == SPECIAL_BIG_STEP:
-                        # print("\nBIG move!\n")
-                        # self.idleCount = 0
-                        # self.promptFlag = 1
-                # elif self.startOfOne:
-                    # if data == IDLE_STEP:
-                        # print("\nSmall move!\n")
-                        # self.startOfOne = 0
-                        # self.idleCount = 0
-                        # self.promptFlag = 1
-                    # elif data == SPECIAL_BIG_STEP:
-                        # print("\nBIG move!\n")
-                        # self.startOfOne = 0
-                        # self.idleCount = 0
-                        # self.promptFlag = 1
                         
             # print(data)
             
@@ -675,13 +682,14 @@ class NotificationDelegate(DefaultDelegate):
                     if self.oneCount > 3:
                         if data == SPECIAL_SMALL_STEP:
                             self.oneBuff += 1
-                        if self.oneCount > 6:
-                            if self.oneBuff > 0:
+                        if self.oneCount > 8:
+                            if self.oneBuff > 1:
                                 print('\nBig\n')
                                 moveType = MOVE_TYPE_BIG
                             else:
                                 print('\nSmall\n')
                                 moveType = MOVE_TYPE_SMALL
+                            print(f"{self.oneBuff} / {self.oneCount}")
                             self.oneCount = 0
                             self.oneBuff = 0
                             self.startOfOne = 0
@@ -692,49 +700,6 @@ class NotificationDelegate(DefaultDelegate):
             
             if clientFlag and moveType is not None:
                 client.send_data(moveType, POSITION_PACKET_TYPE)
-                    
-            
-            # if self.idleCount > 0:
-                # if not self.startOfOne and data == SPECIAL_SMALL_STEP:
-                    # self.startOfOne = 1
-                # elif self.startOfOne:
-                    # self.oneCount += 1
-                # if self.oneCount > 2 and self.startOfOne:
-                    # if data == IDLE_STEP:
-                        # print('Small!')
-                    # else:
-                        # print('Big!')
-                    # self.startOfOne = 0
-            
-            
-            
-            
-            # if data == IDLE_STEP:
-                # self.ignoreIdle -= 1
-                
-                # if self.ignoreIdle <= 0:
-                    # # print(f"IDLE!") 
-                    # self.ignoreIdle = 5
-                    # self.idleCount += 1
-            # if self.idleCount > 2:
-                # if self.promptFlag:
-                    # print('Move debouncing off. You may start moving if you so desire')
-                    # self.promptFlag = 0
-                # if not self.startOfOne:
-                    # if data == SPECIAL_SMALL_STEP:
-                        # print("\nWaiting for next movement...\n")
-                        # self.startOfOne = 1
-                # elif self.startOfOne:
-                    # if data == IDLE_STEP:
-                        # print("\nSmall move!\n")
-                        # self.startOfOne = 0
-                        # self.idleCount = 0
-                        # self.promptFlag = 1
-                    # else:
-                        # print("\nBig move!\n")
-                        # self.startOfOne = 0
-                        # self.idleCount = 0
-                        # self.promptFlag = 1
             
         #Arm-beetle code
         elif self.deviceId == 0:
@@ -973,23 +938,28 @@ def run():
                 totalDevicesConnected += 1
             except: #Raised when unable to create connection
                 print('Error in connecting device')
-                
-    # for addr in bt_addrs:
-        # if bt_addrs_isConnected[addr]:
-            # continue
-        # idx = bt_addrs[addr]
-        # bt_addrs_isConnected[addr] = True
-        # print(addr, 'found!')
-        # try:
-            # p = Peripheral(addr)
-            # connections[idx] = p
-            # t = ConnectionHandlerThread(idx)
-            # t.daemon = True #Set to true so can CTRL-C the program easily
-            # t.start()
-            # connection_threads[idx] = t
-            # totalDevicesConnected += 1
-        # except: #Raised when unable to create connection
-            # print('Error in connecting device')
+    # concount = 0
+    # while True:
+        # if concount == 2:
+            # break
+        # for addr in bt_addrs:
+            # if bt_addrs_isConnected[addr]:
+                # continue
+            # idx = bt_addrs[addr]
+            # bt_addrs_isConnected[addr] = True
+            # print(addr, 'found!')
+            # try:
+                # p = Peripheral(addr)
+                # connections[idx] = p
+                # t = ConnectionHandlerThread(idx)
+                # t.daemon = True #Set to true so can CTRL-C the program easily
+                # t.start()
+                # connection_threads[idx] = t
+                # totalDevicesConnected += 1
+                # concount += 1
+                # sleep(1)
+            # except: #Raised when unable to create connection
+                # print('Error in connecting device')
     if preprocessFlag:
         ppT = PreprocessorThread(time())
         ppT.daemon = True
@@ -1006,6 +976,21 @@ if __name__ == "__main__":
         print('End of initial scan')
         
         while True: #IMPT WHILE LOOP FOR KEEPING THREADS ALIVE!!!
+            '''
+            Dancer A
+            A -> init ntp
+            A -> step if needed
+            A -> move action do normal op, until server sends DROP packet(newRound)
+            A -> If DROP packet received, set buffer to null, wait 1s, then set flag to true
+            A -> Inside Preprocessing, will set timestamp the moment buffer gets filled up again
+            A -> Sends same timestamp, appended to each ML_PACKET_TYPE thereafter for server to process
+            '''
+            if clientFlag:
+                startOfRoundMsg = self.client.socket.recv(1024)
+                print(startOfRoundMsg)
+                outputBuffer = []
+                sleep(1)
+                isStartOfRound = True
             pass
     except KeyboardInterrupt:
         print('END OF PROGRAM. Disconnecting all devices..')
