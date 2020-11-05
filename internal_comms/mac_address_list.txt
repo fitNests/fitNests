@@ -1,5 +1,5 @@
 "34:15:13:22:96:6f":1, #Nic Wrist
-"f8:30:02:08:e2:b5":2, #Nic Ankle
+"50:65:83:6f:54:16":2, #Nic Ankle
 "c8:df:84:fe:52:2b":3, #Rusdi Wrist
 "f8:30:02:08:e5:e3":4, #Rusdi Ankle
 "f8:30:02:09:14:a9":5, #Jiannan Wrist
