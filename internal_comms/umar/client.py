@@ -41,7 +41,7 @@ UPDATE NEW CODE BELOW
 #Umar
 bt_addrs = {
 "2c:ab:33:cc:6a:f6":9, #Umar Wrist
-"f8:30:02:e2:b5":10, #Umar Ankle 
+"f8:30:02:08:e2:b5":10, #Umar Ankle 
             }
 
 #Lincoln
