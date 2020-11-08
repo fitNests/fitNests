@@ -7,6 +7,6 @@
 "34:15:13:22:a9:be":8, #Claire Wrist
 "f8:30:02:09:17:a4":7, #Claire Ankle
 "2c:ab:33:cc:6a:f6":9, #Umar Wrist
-"2c:ab:33:cc:6a:f6":9, #Umar Ankle ---- Need check Umar set again
+"f8:30:42:08:e2:b5":9, #Umar Ankle
 "2c:ab:33:cc:68:fa":10 #Lincoln Wrist
 "50:65:83:6f:57:50":11 #Lincoln Ankle
