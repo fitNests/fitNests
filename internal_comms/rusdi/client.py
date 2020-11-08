@@ -5,7 +5,7 @@ CHANGE YOUR DANCER_ID HERE!
 DANCER_ID = '2'
 
 #Set to 1 send to socket!
-clientFlag = 1
+clientFlag = 0
 preprocessFlag = 1
 
 '''
@@ -33,10 +33,10 @@ UPDATE NEW CODE BELOW
             # }
 
 ##Jiannan
-# bt_addrs = {
-# "f8:30:02:09:14:a9":7, #Jiannan wrist
-# "c8:df:84:fe:3f:f4":8, #Jiannan leg
-            # }
+bt_addrs = {
+"f8:30:02:09:14:a9":7, #Jiannan wrist
+"c8:df:84:fe:3f:f4":8, #Jiannan leg
+            }
 
 #Umar
 # bt_addrs = {
@@ -45,10 +45,10 @@ UPDATE NEW CODE BELOW
             # }
 
 #Lincoln
-bt_addrs = {
-"2c:ab:33:cc:68:fa":11, #Lincoln Wrist
-"f8:30:02:08:e5:e3":4, #Rusdi leg
-            }
+# bt_addrs = {
+# "2c:ab:33:cc:68:fa":11, #Lincoln Wrist
+# "f8:30:02:08:e5:e3":4, #Rusdi leg
+            # }
             
 # "50:65:83:6f:57:50":12, #Lincoln Ankle
 #############################################
