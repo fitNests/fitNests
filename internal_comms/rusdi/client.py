@@ -968,9 +968,15 @@ if __name__ == "__main__":
             client = Client(ip_addr, port_num, secret_key)
         run()
         print('End of initial scan')
-        response = ntpclient.request('sg.pool.ntp.org')
-        dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
-        bufferTimestamp = getSeconds(dateInstance)
+        try:
+            response = ntpclient.request('sg.pool.ntp.org')
+            dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+            bufferTimestamp = getSeconds(dateInstance)
+        except Exception as ntpX:
+            print('err', ntpX)
+            response = ntpclient.request('sg.pool.ntp.org')
+            dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+            bufferTimestamp = getSeconds(dateInstance)
         while True: #IMPT WHILE LOOP FOR KEEPING THREADS ALIVE!!!
             '''
             Dancer A
