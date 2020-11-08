@@ -2,7 +2,7 @@
 CHANGE YOUR DANCER_ID HERE!
 '''
 #Dancers a,b,c = '0','1','2'
-DANCER_ID = '2'
+DANCER_ID = '0'
 
 #Set to 1 send to socket!
 clientFlag = 1
