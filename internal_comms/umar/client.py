@@ -2,10 +2,10 @@
 CHANGE YOUR DANCER_ID HERE!
 '''
 #Dancers a,b,c = '0','1','2'
-DANCER_ID = '0'
+DANCER_ID = '2'
 
 #Set to 1 send to socket!
-clientFlag = 1
+clientFlag = 0
 preprocessFlag = 1
 
 '''
@@ -22,7 +22,7 @@ UPDATE NEW CODE BELOW
 
 ##Rusdi
 # bt_addrs = {
-# "c8:df:84:fe:52:2b":3,#Rusdi wrist            
+# "c8:df:84:fe:52:2b":3,#Rusdi wrist
 # "f8:30:02:08:e5:e3":4, #Rusdi leg
             # }
 
@@ -31,6 +31,7 @@ UPDATE NEW CODE BELOW
 # "34:15:13:22:a9:be":5, #Claire Wrist
 # "f8:30:02:09:17:a4":6, #Claire Ankle
             # }
+            
 
 ##Jiannan
 # bt_addrs = {
@@ -41,7 +42,7 @@ UPDATE NEW CODE BELOW
 #Umar
 bt_addrs = {
 "2c:ab:33:cc:6a:f6":9, #Umar Wrist
-"f8:30:02:08:e2:b5":10, #Umar Ankle 
+"2c:ab:33:cc:6a:f6":10, #Umar Ankle 
             }
 
 #Lincoln
@@ -866,6 +867,7 @@ class ConnectionHandlerThread (threading.Thread):
             
     def run(self):
         global totalDevicesConnected
+        global outputBuffer
         #Setup respective delegates, service, characteristic...
         self.connection = connections[self.connection_index]
         self.addr = self.connection.addr
@@ -894,6 +896,7 @@ class ConnectionHandlerThread (threading.Thread):
                     if endFlag:
                         continue
                     print("Device ", self.connection_index, " disconnected!")
+                    outputBuffer = []
                     self.isConnected = False
                     bt_addrs_isConnected[self.addr] = False
                     self.connection.disconnect()
@@ -968,9 +971,27 @@ if __name__ == "__main__":
             client = Client(ip_addr, port_num, secret_key)
         run()
         print('End of initial scan')
-        response = ntpclient.request('sg.pool.ntp.org')
-        dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
-        bufferTimestamp = getSeconds(dateInstance)
+        # try:
+            # response = ntpclient.request('sg.pool.ntp.org')
+            # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+            # bufferTimestamp = getSeconds(dateInstance)
+        # except Exception as ntpX:
+            # print('err', ntpX)
+            # response = ntpclient.request('sg.pool.ntp.org')
+            # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+            # bufferTimestamp = getSeconds(dateInstance)
+        ntpFlag = False
+        while True:
+            if ntpFlag:
+                break
+            try:
+                response = ntpclient.request('sg.pool.ntp.org')
+                dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+                bufferTimestamp = getSeconds(dateInstance)
+                ntpFlag = True
+            except Exception as ntpX:
+                print('err', ntpX, 'Trying again...')
+            
         while True: #IMPT WHILE LOOP FOR KEEPING THREADS ALIVE!!!
             '''
             Dancer A

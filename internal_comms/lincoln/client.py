@@ -22,7 +22,7 @@ UPDATE NEW CODE BELOW
 
 ##Rusdi
 # bt_addrs = {
-# "c8:df:84:fe:52:2b":3,#Rusdi wrist            
+# "c8:df:84:fe:52:2b":3,#Rusdi wrist
 # "f8:30:02:08:e5:e3":4, #Rusdi leg
             # }
 
@@ -31,6 +31,7 @@ UPDATE NEW CODE BELOW
 # "34:15:13:22:a9:be":5, #Claire Wrist
 # "f8:30:02:09:17:a4":6, #Claire Ankle
             # }
+            
 
 ##Jiannan
 # bt_addrs = {
@@ -47,7 +48,7 @@ UPDATE NEW CODE BELOW
 #Lincoln
 bt_addrs = {
 "2c:ab:33:cc:68:fa":11, #Lincoln Wrist
-"50:65:83:6f:57:50":4, #Rusdi leg
+"f8:30:02:08:e5:e3":4, #Rusdi leg
             }
             
 # "50:65:83:6f:57:50":12, #Lincoln Ankle
@@ -970,15 +971,27 @@ if __name__ == "__main__":
             client = Client(ip_addr, port_num, secret_key)
         run()
         print('End of initial scan')
-        try:
-            response = ntpclient.request('sg.pool.ntp.org')
-            dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
-            bufferTimestamp = getSeconds(dateInstance)
-        except Exception as ntpX:
-            print('err', ntpX)
-            response = ntpclient.request('sg.pool.ntp.org')
-            dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
-            bufferTimestamp = getSeconds(dateInstance)
+        # try:
+            # response = ntpclient.request('sg.pool.ntp.org')
+            # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+            # bufferTimestamp = getSeconds(dateInstance)
+        # except Exception as ntpX:
+            # print('err', ntpX)
+            # response = ntpclient.request('sg.pool.ntp.org')
+            # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+            # bufferTimestamp = getSeconds(dateInstance)
+        ntpFlag = False
+        while True:
+            if ntpFlag:
+                break
+            try:
+                response = ntpclient.request('sg.pool.ntp.org')
+                dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+                bufferTimestamp = getSeconds(dateInstance)
+                ntpFlag = True
+            except Exception as ntpX:
+                print('err', ntpX, 'Trying again...')
+            
         while True: #IMPT WHILE LOOP FOR KEEPING THREADS ALIVE!!!
             '''
             Dancer A
