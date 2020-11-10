@@ -62,7 +62,7 @@ volatile long yawDiff = 0;
 volatile long pitchDiff = 0;
 volatile long rollDiff = 0;
 
-volatile bool sendFlag = false;
+volatile bool sendFlag = true;
 
 // Indicates whether MPU interrupt pin has gone high
 volatile bool mpuInterrupt = false;

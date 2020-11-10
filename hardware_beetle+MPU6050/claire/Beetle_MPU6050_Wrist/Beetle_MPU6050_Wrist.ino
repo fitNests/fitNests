@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x34151322A9BE
+//0XF830020917A4
 
 #define OUTPUT_READABLE_WORLDACCEL
 
@@ -62,7 +62,7 @@ volatile long yawDiff = 0;
 volatile long pitchDiff = 0;
 volatile long rollDiff = 0;
 
-volatile bool sendFlag = false;
+volatile bool sendFlag = true;
 
 // Indicates whether MPU interrupt pin has gone high
 volatile bool mpuInterrupt = false;

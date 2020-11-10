@@ -9,7 +9,7 @@
 // AD0 high = 0x69
 
 //Binding address
-// 0x2CAB33CC6Af6
+// 0xF8304208E2B5
 
 // declare static variables
 #define OUTPUT_READABLE_WORLDACCEL
@@ -69,7 +69,7 @@ volatile long pitchDiff = 0;
 volatile long rollDiff = 0;
 volatile long xTotal = 0;
 
-volatile bool sendFlag = false;
+volatile bool sendFlag = true;
 volatile bool smallStep = false;
 volatile int bodyCount = 0;
 
