@@ -21,10 +21,10 @@ UPDATE NEW CODE BELOW
             # }
 
 ##Rusdi
-# bt_addrs = {
-# "c8:df:84:fe:52:2b":3,#Rusdi wrist            
-# "f8:30:02:08:e5:e3":4, #Rusdi leg
-            # }
+bt_addrs = {
+"c8:df:84:fe:52:2b":3,#Rusdi wrist            
+"f8:30:02:08:e5:e3":4, #Rusdi leg
+            }
 
 ##Claire
 # bt_addrs = {
@@ -33,10 +33,10 @@ UPDATE NEW CODE BELOW
             # }
 
 ##Jiannan
-bt_addrs = {
-"f8:30:02:09:14:a9":7, #Jiannan wrist
-"c8:df:84:fe:3f:f4":8, #Jiannan leg
-            }
+# bt_addrs = {
+# "f8:30:02:09:14:a9":7, #Jiannan wrist
+# "c8:df:84:fe:3f:f4":8, #Jiannan leg
+            # }
 
 #Umar
 # bt_addrs = {
@@ -866,6 +866,7 @@ class ConnectionHandlerThread (threading.Thread):
             
     def run(self):
         global totalDevicesConnected
+        global outputBuffer
         #Setup respective delegates, service, characteristic...
         self.connection = connections[self.connection_index]
         self.addr = self.connection.addr
@@ -894,6 +895,7 @@ class ConnectionHandlerThread (threading.Thread):
                     if endFlag:
                         continue
                     print("Device ", self.connection_index, " disconnected!")
+                    outputBuffer = []
                     self.isConnected = False
                     bt_addrs_isConnected[self.addr] = False
                     self.connection.disconnect()
