@@ -2,11 +2,17 @@
 CHANGE YOUR DANCER_ID HERE!
 '''
 #Dancers a,b,c = '0','1','2'
-DANCER_ID = '0'
+DANCER_ID = '2'
 
 #Set to 1 send to socket!
 clientFlag = 0
 preprocessFlag = 1
+
+'''
+----- ----- ----- ----- 
+UPDATE NEW CODE BELOW
+----- ----- ----- ----- 
+'''
 
 #Nic
 # bt_addrs = {
@@ -15,10 +21,10 @@ preprocessFlag = 1
             # }
 
 ##Rusdi
-bt_addrs = {
-"c8:df:84:fe:52:2b":3,#Rusdi wrist            
-"f8:30:02:08:e5:e3":4, #Rusdi leg
-            }
+# bt_addrs = {
+# "c8:df:84:fe:52:2b":3,#Rusdi wrist            
+# "f8:30:02:08:e5:e3":4, #Rusdi leg
+            # }
 
 ##Claire
 # bt_addrs = {
@@ -41,9 +47,10 @@ bt_addrs = {
 #Lincoln
 bt_addrs = {
 "2c:ab:33:cc:68:fa":11, #Lincoln Wrist
-"50:65:83:6f:57:50":12, #Lincoln Ankle
+"50:65:83:6f:57:50":4, #Rusdi leg
             }
-
+            
+# "50:65:83:6f:57:50":12, #Lincoln Ankle
 #############################################
 
 import sys
@@ -145,6 +152,7 @@ ACTIONS = ['','hair','rocket','zigzag']
 
 #Timestamp
 ntpclient = ntplib.NTPClient()
+
 bufferTimestamp = None
 
 #Start of round
@@ -407,7 +415,7 @@ class Client():
     the last byte is decrypted as nonsense on server side
     '''
     def send_data(self, msg, packetType):
-        msgToSend = packetType + ':' + DANCER_ID + ':' + msg
+        msgToSend = packetType + ':' + msg
         if packetType == ML_PACKET_TYPE:
             msgToSend += ':' + str(bufferTimestamp)
         to_send = self.encrypt_message(msgToSend)
@@ -858,6 +866,7 @@ class ConnectionHandlerThread (threading.Thread):
             
     def run(self):
         global totalDevicesConnected
+        global outputBuffer
         #Setup respective delegates, service, characteristic...
         self.connection = connections[self.connection_index]
         self.addr = self.connection.addr
@@ -866,7 +875,7 @@ class ConnectionHandlerThread (threading.Thread):
         self.c = self.s.getCharacteristics()[0]
         
         #Delay before Handshake (to avoid any malformed packets somehow)
-        print('Start', self.connection_index, self.c.uuid)
+        print(f"\nStarted device {self.connection_index}, {self.c.uuid}\n")
         # sleep(self.delay)
         # sleep(delayWindow[randint(0, 3)])
         # print('Done sleep')
@@ -886,6 +895,7 @@ class ConnectionHandlerThread (threading.Thread):
                     if endFlag:
                         continue
                     print("Device ", self.connection_index, " disconnected!")
+                    outputBuffer = []
                     self.isConnected = False
                     bt_addrs_isConnected[self.addr] = False
                     self.connection.disconnect()
@@ -960,7 +970,15 @@ if __name__ == "__main__":
             client = Client(ip_addr, port_num, secret_key)
         run()
         print('End of initial scan')
-        
+        try:
+            response = ntpclient.request('sg.pool.ntp.org')
+            dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+            bufferTimestamp = getSeconds(dateInstance)
+        except Exception as ntpX:
+            print('err', ntpX)
+            response = ntpclient.request('sg.pool.ntp.org')
+            dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+            bufferTimestamp = getSeconds(dateInstance)
         while True: #IMPT WHILE LOOP FOR KEEPING THREADS ALIVE!!!
             '''
             Dancer A
@@ -972,8 +990,10 @@ if __name__ == "__main__":
             A -> Sends same timestamp, appended to each ML_PACKET_TYPE thereafter for server to process
             '''
             if clientFlag:
-                startOfRoundMsg = self.client.socket.recv(1024)
-                print(startOfRoundMsg)
+                sleep(1)
+                print(f"Main thread waiting for... next round")
+                startOfRoundMsg = client.sock.recv(1024)
+                print(f"\nMain thread got next round signal! {startOfRoundMsg}")
                 outputBuffer = []
                 sleep(1)
                 isStartOfRound = True
