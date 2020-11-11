@@ -5,7 +5,7 @@ CHANGE YOUR DANCER_ID HERE!
 DANCER_ID = '0'
 
 #Set to 1 send to socket!
-clientFlag = 0
+clientFlag = 1
 preprocessFlag = 1
 
 '''
@@ -17,7 +17,7 @@ UPDATE NEW CODE BELOW
 #Nic
 # bt_addrs = {
 # "34:15:13:22:96:6f":1, #Nic Wrist
-# "f8:30:02:08:e2:b5":2, #Nic Ankle
+# "50:65:83:6f:54:16":2, #Nic Ankle
             # }
 
 ##Rusdi
@@ -122,6 +122,7 @@ WINDOW_SIZE = 100
 IDLE_STEP = "0,0,0,0,0,0"
 SPECIAL_SMALL_STEP = "1111,1111,1111,1111,1111,1111"
 SPECIAL_BIG_STEP = "2222,2222,2222,2222,2222,2222"
+START_OF_ROUND_THRESHOLD = 90
 
 ###
 
@@ -238,7 +239,7 @@ class PreprocessorThread(threading.Thread):
                 if not clearToggle:
                     outputBuffer = []
                     clearToggle = True
-                if len(outputBuffer) > 0:
+                if len(outputBuffer) > START_OF_ROUND_THRESHOLD:
                     #start of move
                     # response = ntpclient.request('sg.pool.ntp.org')
                     # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)

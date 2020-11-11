@@ -122,6 +122,7 @@ WINDOW_SIZE = 100
 IDLE_STEP = "0,0,0,0,0,0"
 SPECIAL_SMALL_STEP = "1111,1111,1111,1111,1111,1111"
 SPECIAL_BIG_STEP = "2222,2222,2222,2222,2222,2222"
+START_OF_ROUND_THRESHOLD = 90
 
 ###
 
@@ -238,13 +239,13 @@ class PreprocessorThread(threading.Thread):
                 if not clearToggle:
                     outputBuffer = []
                     clearToggle = True
-                if len(outputBuffer) > 0:
+                if len(outputBuffer) > START_OF_ROUND_THRESHOLD:
                     #start of move
                     # response = ntpclient.request('sg.pool.ntp.org')
                     # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
                     # bufferTimestamp = getSeconds(dateInstance)
                     bufferTimestamp = int(round(time() * 1000))
-                    print('Timestamp:', bufferTimestamp)
+                    print(f"\n SYNC DANCER {DANCER_ID} Timestamp: {bufferTimestamp}\n")
                     isStartOfRound = False
                     
             #Check if outputBuffer size == 90, then start to send to 'client'
@@ -430,8 +431,6 @@ class Client():
         global ntpclient
         first = self.sock.recv(1024).decode("utf8")
         # recv_time = getSeconds(datetime.datetime.fromtimestamp(ntpclient.request('sg.pool.ntp.org').tx_time))
-        # to_return = first + str(recv_time) + '|' + \
-                    # str(getSeconds(datetime.datetime.fromtimestamp(ntpclient.request('sg.pool.ntp.org').tx_time))) + '|' + DANCER_ID
         recv_time = int(round(time() * 1000))
         to_return = first + str(recv_time) + '|' + \
                     str(int(round(time() * 1000))) + '|' + DANCER_ID
