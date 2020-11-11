@@ -244,7 +244,7 @@ class PreprocessorThread(threading.Thread):
                     # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
                     # bufferTimestamp = getSeconds(dateInstance)
                     bufferTimestamp = int(round(time() * 1000))
-                    print('Timestamp:', bufferTimestamp)
+                    print(f"\n SYNC DANCER {DANCER_ID} Timestamp: {bufferTimestamp}\n")
                     isStartOfRound = False
                     
             #Check if outputBuffer size == 90, then start to send to 'client'
