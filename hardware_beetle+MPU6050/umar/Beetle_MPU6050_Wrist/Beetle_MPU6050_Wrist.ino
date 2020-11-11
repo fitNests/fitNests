@@ -97,12 +97,12 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
   devStatus = mpu.dmpInitialize();
 
   // Offsets and calibrations
-  mpu.setXAccelOffset(-1211);
-  mpu.setYAccelOffset(-4137);
-  mpu.setZAccelOffset(1382);
-  mpu.setXGyroOffset(248);
-  mpu.setYGyroOffset(-150);
-  mpu.setZGyroOffset(67);
+  mpu.setXAccelOffset(-2390);
+  mpu.setYAccelOffset(-6175);
+  mpu.setZAccelOffset(2402);
+  mpu.setXGyroOffset(-85);
+  mpu.setYGyroOffset(92);
+  mpu.setZGyroOffset(-4);
 
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
