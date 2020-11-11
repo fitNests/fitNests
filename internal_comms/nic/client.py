@@ -5,7 +5,7 @@ CHANGE YOUR DANCER_ID HERE!
 DANCER_ID = '1'
 
 #Set to 1 send to socket!
-clientFlag = 0
+clientFlag = 1
 preprocessFlag = 1
 
 '''
@@ -17,7 +17,7 @@ UPDATE NEW CODE BELOW
 #Nic
 bt_addrs = {
 "34:15:13:22:96:6f":1, #Nic Wrist
-"f8:30:02:08:e2:b5":2, #Nic Ankle
+"50:65:83:6f:54:16":2, #Nic Ankle
             }
 
 ##Rusdi
@@ -240,9 +240,11 @@ class PreprocessorThread(threading.Thread):
                     clearToggle = True
                 if len(outputBuffer) > 0:
                     #start of move
-                    response = ntpclient.request('sg.pool.ntp.org')
-                    dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
-                    bufferTimestamp = getSeconds(dateInstance)
+                    # response = ntpclient.request('sg.pool.ntp.org')
+                    # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+                    # bufferTimestamp = getSeconds(dateInstance)
+                    bufferTimestamp = int(round(time() * 1000))
+                    print('Timestamp:', bufferTimestamp)
                     isStartOfRound = False
                     
             #Check if outputBuffer size == 90, then start to send to 'client'
@@ -427,9 +429,12 @@ class Client():
     def calibration(self):
         global ntpclient
         first = self.sock.recv(1024).decode("utf8")
-        recv_time = getSeconds(datetime.datetime.fromtimestamp(ntpclient.request('sg.pool.ntp.org').tx_time))
+        # recv_time = getSeconds(datetime.datetime.fromtimestamp(ntpclient.request('sg.pool.ntp.org').tx_time))
+        # to_return = first + str(recv_time) + '|' + \
+                    # str(getSeconds(datetime.datetime.fromtimestamp(ntpclient.request('sg.pool.ntp.org').tx_time))) + '|' + DANCER_ID
+        recv_time = int(round(time() * 1000))
         to_return = first + str(recv_time) + '|' + \
-                    str(getSeconds(datetime.datetime.fromtimestamp(ntpclient.request('sg.pool.ntp.org').tx_time))) + '|' + DANCER_ID
+                    str(int(round(time() * 1000))) + '|' + DANCER_ID
         self.sock.sendall(to_return.encode("utf8"))
         
 
@@ -985,9 +990,12 @@ if __name__ == "__main__":
             if ntpFlag:
                 break
             try:
-                response = ntpclient.request('sg.pool.ntp.org')
-                dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
-                bufferTimestamp = getSeconds(dateInstance)
+                # response = ntpclient.request('sg.pool.ntp.org')
+                # dateInstance = datetime.datetime.fromtimestamp(response.tx_time)
+                # bufferTimestamp = getSeconds(dateInstance)
+                # millis = int(round(time() * 1000))
+                bufferTimestamp = int(round(time() * 1000))
+                print('Timestamp:', bufferTimestamp)
                 ntpFlag = True
             except Exception as ntpX:
                 print('err', ntpX, 'Trying again...')
