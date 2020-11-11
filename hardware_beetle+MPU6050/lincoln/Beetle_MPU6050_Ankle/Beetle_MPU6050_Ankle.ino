@@ -69,7 +69,7 @@ volatile long pitchDiff = 0;
 volatile long rollDiff = 0;
 volatile long xTotal = 0;
 
-volatile bool sendFlag = false;
+volatile bool sendFlag = true;
 volatile bool smallStep = false;
 volatile int bodyCount = 0;
 
