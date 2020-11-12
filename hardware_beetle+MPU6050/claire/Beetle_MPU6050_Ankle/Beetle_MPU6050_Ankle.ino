@@ -110,10 +110,10 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
   // Offsets and calibrations
   mpu.setXAccelOffset(-545);
   mpu.setYAccelOffset(4096);
-  mpu.setZAccelOffset(-164);
-  mpu.setXGyroOffset(-1879);
-  mpu.setYGyroOffset(3578);
-  mpu.setZGyroOffset(112);
+  mpu.setZAccelOffset(-55);
+  mpu.setXGyroOffset(-2288);
+  mpu.setYGyroOffset(3597);
+  mpu.setZGyroOffset(113);
 
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
@@ -167,6 +167,7 @@ int loop_single() {
   if (fifoCount < packetSize) {
   // no error
   }
+
   else if ((mpuIntStatus & (0x01 << MPU6050_INTERRUPT_FIFO_OFLOW_BIT)) || fifoCount >= 1024) {
     // reset so we can continue cleanly
     mpu.resetFIFO();
@@ -513,4 +514,19 @@ void loop() {
   yawDiff = abs(yawDiff);
   pitchDiff = abs(pitchDiff);
   rollDiff = abs(rollDiff);
+
+//        Serial.print("[");
+//    Serial.print(xDiff);
+//    Serial.print(",");
+//    Serial.print(yDiff);
+//    Serial.print(",");
+//    Serial.print(zDiff);
+//    Serial.print(",");
+//    Serial.print(yawDiff);
+//    Serial.print(",");
+//    Serial.print(pitchDiff);
+//    Serial.print(",");
+//    Serial.print(rollDiff);
+//    Serial.println("]");
+//    delay(40);
 }

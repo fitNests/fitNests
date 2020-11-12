@@ -97,12 +97,12 @@ void setup_accelerometer(MPU6050 mpu, int INTERRUPT_PIN) {
   devStatus = mpu.dmpInitialize();
 
   // Offsets and calibrations
-  mpu.setXAccelOffset(-1233);
-  mpu.setYAccelOffset(-3784);
-  mpu.setZAccelOffset(1010);
-  mpu.setXGyroOffset(214);
-  mpu.setYGyroOffset(123);
-  mpu.setZGyroOffset(60);
+  mpu.setXAccelOffset(-1205);
+  mpu.setYAccelOffset(-3694);
+  mpu.setZAccelOffset(1006);
+  mpu.setXGyroOffset(216);
+  mpu.setYGyroOffset(122);
+  mpu.setZGyroOffset(61);
 
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
@@ -378,18 +378,18 @@ void loop() {
     arr[5] = 0;
   }
 
-  //  Serial.print("[");
-  //  Serial.print(arr[0]);
-  //  Serial.print(",");
-  //  Serial.print(arr[1]);
-  //  Serial.print(",");
-  //  Serial.print(arr[2]);
-  //  Serial.print(",");
-  //  Serial.print(arr[3]);
-  //  Serial.print(",");
-  //  Serial.print(arr[4]);
-  //  Serial.print(",");
-  //  Serial.print(arr[5]);
-  //  Serial.println("]");
-  //  delay(40);
+//    Serial.print("[");
+//    Serial.print(arr[0]);
+//    Serial.print(",");
+//    Serial.print(arr[1]);
+//    Serial.print(",");
+//    Serial.print(arr[2]);
+//    Serial.print(",");
+//    Serial.print(arr[3]);
+//    Serial.print(",");
+//    Serial.print(arr[4]);
+//    Serial.print(",");
+//    Serial.print(arr[5]);
+//    Serial.println("]");
+//    delay(40);
 }
