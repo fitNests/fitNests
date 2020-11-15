@@ -11,6 +11,14 @@ from base64 import b64decode
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
+import pymongo
+import time
+from pymongo import MongoClient
+
+client = MongoClient('mongodb://localhost:27017/')
+db = client['test']
+records = db.testusers
+
 
 class Server(threading.Thread):
     def __init__(self, ip_addr, port_num):
@@ -45,7 +53,7 @@ class Server(threading.Thread):
         json_msg = json.loads(decrypted_message)
 
         return json_msg
-    
+
     def run(self):
         while not self.shutdown.is_set():
             data = self.connection.recv(1024)
@@ -57,12 +65,15 @@ class Server(threading.Thread):
                     print('Received data:', decrypted_message)
                     print(type(decrypted_message))
                     # todo: convert data dict to required format to store
+                    records.delete_one({'id': 'stream'})
+                    records.insert_one(decrypted_message)
+
                 except Exception as e:
                     print("Failure", str(e))
             else:
                 print('no more data from', self.client_address, file=sys.stderr)
                 self.stop()
-    
+
     def setup_connection(self):
         # Wait for a connection
         print('waiting for a connection', file=sys.stderr)
@@ -87,6 +98,7 @@ def construct_message():
 
 
 def main():
+
     if len(sys.argv) != 3:
         print('Invalid number of arguments')
         print('python dash_server.py [IP address] [Port]')
@@ -102,4 +114,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
