@@ -14,7 +14,7 @@ def extract_data(name):
     
     #parse into lists
     output = [[] for i in range(6)]
-    for i in range(7, len(data)):
+    for i in range(len(data)):
         if ("[" not in data[i]): # invalid row, either new line char or grabage
             continue
         else:
