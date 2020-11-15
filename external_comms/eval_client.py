@@ -9,7 +9,7 @@ from base64 import b64encode
 
 ACTIONS = ['zigzag', 'rocket', 'hair']
 POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
-PADDING = ' '
+PADDING = b' '
 BLOCK_SIZE = 16
 
 
@@ -23,7 +23,7 @@ class Client:
 
     def send_data(self, msg):
         to_send = self.encrypt_message(msg)
-        print("to send:", to_send)
+        # print("to send:", to_send)
         self.sock.sendall(to_send)
 
     def stop(self):

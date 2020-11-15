@@ -21,7 +21,7 @@ class Client:
     def send_data(self, msg):
         to_send = self.encrypt_message(msg)
         # print("to send:", to_send)
-        print('sending data')
+        # print('sending data')
         self.sock.sendall(to_send)
 
     def stop(self):
@@ -39,14 +39,20 @@ class Client:
 
 # dummy data for test purposes.
 def construct_message():
-    test_data = ['stream', '1 2 3', 'hair', 100, [1, 1, 1, 100, 100, 100], [2, 2, 2, 200, 200, 200],
+    test_data1 = ['stream', '1 2 3', 'hair', 100, [1, 1, 1, 100, 100, 100], [2, 2, 2, 200, 200, 200],
                  [3, 3, 3, 300, 300, 300]]
+    test_data2 = ['stream', '1 2 3', 'zigzag', 200, [100,100,100,1,1,1], [200,200,200,2,2,2,],
+                 [300,300,300,3,3,3]]
     # msg = '#'
     # for element in test_data:
     #     msg = msg + str(element) + '|'
     # return msg[:-1]
+    
     headers = ['id', 'position', 'action', 'delay', 'user1', 'user2', 'user3']
-    data = dict(zip(headers, test_data))
+    if random.randint(1,2) == 1:
+        data = dict(zip(headers, test_data1))
+    else:
+        data = dict(zip(headers, test_data2))
     return data
 
 
@@ -73,7 +79,7 @@ def main():
             print(f"data: #{count + 1}")
             message = construct_message()
             client.send_data(message)
-            time.sleep(2)
+            time.sleep(1)
             count += 1
             if count == 15:
                 client.stop()
