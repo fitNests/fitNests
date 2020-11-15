@@ -32,34 +32,35 @@ SECRET_KEY = 'thisisunhackable'
 mlp = joblib.load('mlp20201112v1.pkl')
 scaler = joblib.load('scaler1112v1.pkl')
 
-ACTIONS = ['', 'hair', 'rocket', 'zigzag', 'elbowlock', 'pushback', 'scarecrow','shouldershrug', 'windowwipe', 'logout']
-NUM_OF_CLIENTS = 3  # looks flexible, in reality hardcoded to 3 clients lol
-ACTION_THRESHOLD = 2
+ACTIONS = ['', 'hair', 'rocket', 'zigzag', 'elbowlock', 'pushback', 'scarecrow', 'shouldershrug', 'windowwipe',
+           'logout']
+NUM_OF_CLIENTS = 3
+ACTION_THRESHOLD = 2  # number of times the same action is detected to determine final action
 NUM_ROUNDS = 33
-IS_FIRST_CONNECTION = True
 
 client_results = ['' for x in range(NUM_OF_CLIENTS)]
 client_step = [0 for x in range(NUM_OF_CLIENTS)]  # dancer to step
 dancer_pos = [x for x in range(NUM_OF_CLIENTS)]  # position to dancer
 timestamp_list = [None for x in range(NUM_OF_CLIENTS)]
-offset = [0 for x in range(NUM_OF_CLIENTS)]
-features_dict = [[], [], []]  # the absolute state of these hacks
+offset = [0 for x in range(NUM_OF_CLIENTS)]  # time offset
+features_dict = [[], [], []]
 
-#packettype
+# packettype
 SENSOR_DATA = '0'
 POS_DATA = '1'
 
-EVAL_REFRESH = False
+EVAL_REFRESH = False  #
 refresh_time = None
-WAITTIME = 2
+WAITTIME = 2  # time to wait to before sending to eval server
 
 # ntpclient = ntplib.NTPClient()
 
 
 class Server(threading.Thread):
     """
-    Processes for one connection.
+    Process thread for one connection.
     """
+
     def __init__(self, connection):
         super(Server, self).__init__()
 
@@ -67,7 +68,7 @@ class Server(threading.Thread):
 
         self.shutdown = threading.Event()
         self.secret_key = SECRET_KEY
-        assert(len(self.secret_key) == 16)
+        assert (len(self.secret_key) == 16)
 
         self.dancerid = None
 
@@ -75,11 +76,11 @@ class Server(threading.Thread):
         self.is_set_timestamp = False
         self.is_first_packet = True
 
-        # initial time calib handshake here
+        # initial time calibration handshake
         try:
             self.calibration()
         except Exception as e:
-            print("WHAT THE FUCK BRO", e)
+            print("Error in calibrating:", e)
             self.stop()
 
         print(f"DANCER {self.dancerid + 1} CONNECTED!!!")
@@ -88,7 +89,7 @@ class Server(threading.Thread):
         global ntpclient
 
         # first = getSeconds(datetime.datetime.fromtimestamp(ntpclient.request('sg.pool.ntp.org').tx_time))
-        first = int(round(time.time()*1000))
+        first = int(round(time.time() * 1000))
         self.connection.sendall((str(first) + '|').encode("utf8"))
         packet = self.connection.recv(1024).decode("utf8")
         last = int(round(time.time() * 1000))
@@ -100,28 +101,27 @@ class Server(threading.Thread):
         #         ntpconnect = True
         #     except Exception as ntpX:
         #         print('error in connecting to ntp server:', ntpX, '\nTrying again...')
-
         packet = packet[:-1] + str(last)
-        #print(f"dancer {self.dancerid} calibration packet is {packet}")
         packet_int = [int(x) for x in packet.split('|')]
         offset[self.dancerid] = sync_delay.calculate_offset(packet_int)
-        # print(f'offset for dancer {self.dancerid + 1}:', sync_delay.calculate_offset(packet_int))
 
     def run(self):
         global EVAL_REFRESH
 
         zeroes = [0 for x in range(len(ACTIONS))]
         results_dict = dict(zip(ACTIONS, zeroes))
-        starttime = 0
+        # starttime = 0
 
         while not self.shutdown.is_set():
             if EVAL_REFRESH:
                 if self.is_set_action and (client_results[self.dancerid] != ''):
+                    # indicates this thread has already determined action and waiting for the next round
                     continue
                 elif self.is_set_action:
+                    # next round has begun
                     self.connection.sendall(b'ready')
                     self.is_set_action = False
-                    starttime = time.time()
+                    # starttime = time.time()
                 data = self.connection.recv(1024)
                 if data:
                     try:
@@ -129,46 +129,49 @@ class Server(threading.Thread):
                         decrypted_message = self.decrypt_message(msg)
                         msglist = decrypted_message.split(":")
                         packettype = msglist.pop(0)
-                        #self.dancerid = int(msglist.pop(0))
-                        #print('Received data:', packettype, self.dancerid, msglist)
+                        # print('Received data:', packettype, self.dancerid, msglist)
 
-                        # run ML classification
+                        # detect action based on received data
                         if packettype == SENSOR_DATA and self.is_set_action is False:
-                            # with self.rlock:  # blocking ml resource
+                            # drop first packet sent
                             if self.is_first_packet:
                                 self.is_first_packet = False
                                 continue
 
+                            # detect action and increment detected action counter by 1
                             detected_action = self.ml_process(msglist[0])
-                            # print(f"detected action from dancer {self.dancerid + 1}: {detected_action}")
                             results_dict[detected_action] += 1
-                            # print(f'timestamp for dancer {self.dancerid + 1}: {msglist[1]}')
-                            # get first timestamp received for each round and fuck care the rest
                             if not self.is_set_timestamp:
-                                timestamp_list[self.dancerid] = sync_delay.get_ultra96_time(int(msglist[1]), offset[self.dancerid])
+                                timestamp_list[self.dancerid] = sync_delay.get_ultra96_time(int(msglist[1]),
+                                                                                            offset[self.dancerid])
                                 self.is_set_timestamp = True
-                                # print(f'(timestamp set for dancer {self.dancerid + 1} is {timestamp_list[self.dancerid]}')
-                            # pick majority and send to eval+dash servers
+
+                            # determine action: if same action is detected [TWICE] set this action
                             if ACTION_THRESHOLD in results_dict.values():
                                 final_result = max(results_dict, key=results_dict.get)
                                 print(f'~ dancer {self.dancerid + 1} action result: {final_result} ~')
+
                                 # reset action count
                                 results_dict = dict(zip(ACTIONS, zeroes))
                                 client_results[self.dancerid] = final_result
-                                # whatever the hell this next nightmare of a line is it aint pretty
-                                features_dict[self.dancerid] = [int(float(x)) for x in msglist[0][1:len(msglist[0]) - 2].split(',')[:6]]
+                                features_dict[self.dancerid] = [int(float(x)) for x in
+                                                                msglist[0][1:len(msglist[0]) - 2].split(',')[:6]]
+                                # reset flags and block until next round
                                 self.is_set_timestamp = False
-                                self.is_set_action = True  # block thread until general processing is done
+                                self.is_set_action = True
                                 self.is_first_packet = True
                                 # print("time taken to decide on one move is", time.time() - starttime)
+
                         elif packettype == POS_DATA:
+                            # set the step size taken by this dancer
                             client_step[self.dancerid] = int(msglist[0])
 
                     except Exception as e:
                         if self.is_first_packet:
+                            # high chance first packet received is broken (for some reason)
                             print("broken first packet, carry on.")
-                        else :
-                            print(f"shit broke for dancer {self.dancerid + 1}.", str(e))
+                        else:
+                            print(f"Error from dancer {self.dancerid + 1}:", str(e))
                         self.is_first_packet = False
                 else:
                     print(f"DANCER {self.dancerid + 1} SHUT DOWN")
@@ -185,7 +188,12 @@ class Server(threading.Thread):
 
         return msg
 
-    def ml_process(self, message):  # currently directly from model
+    def ml_process(self, message):
+        """
+        Machine learning classification process. mlp file itself returns an integer whose index corresponds
+        to items in ACTIONS list.
+        Returns detected action based on data input.
+        """
         x_input = []
         raw = message[1:len(message) - 2]
         processed = raw.split(",")
@@ -204,10 +212,11 @@ class Processing(threading.Thread):
     General processing thread.
     Processes data from all three clients together and sends to eval and dash.
     """
+
     def __init__(self):
         super(Processing, self).__init__()
         self.shutdown = threading.Event()
-        self.timeout = 50
+        self.timeout = 50  # automatically send to eval server around every 50 seconds regardless of results
         # self.timer = threading.Timer(self.timeout, self.set_refresh_false)
 
         # eval client and dash client initialized here
@@ -220,6 +229,13 @@ class Processing(threading.Thread):
                             'delay', 'user1features', 'user2features', 'user3features']
 
     def run(self):
+        """
+        Processing: determines required fields from all three clients' data and
+        sends to eval server and dash server if applicable. Receives current
+        new position from eval server to signal start of next round and
+        clears all buffers to start the round.
+        Shuts down after
+        """
         global client_results
         global client_step
         global EVAL_REFRESH
@@ -228,7 +244,7 @@ class Processing(threading.Thread):
         global timestamp_list
         global NUM_ROUNDS
 
-        # can't tell when the eval server is ready for first round so hantam
+        # can't tell when the eval server is ready for first round so guess
         time.sleep(20)
         print("eval server ready, maybe, can't tell")
         EVAL_REFRESH = True
@@ -240,43 +256,36 @@ class Processing(threading.Thread):
             if (not EVAL_REFRESH) or (time.time() - refresh_time > self.timeout and counting_down):
                 counting_down = False
                 final_action = self.calc_action()
-                #print(f'\n[[[Final decided action is {final_action}]]]')
+                # print(f'\n[[[Final decided action is {final_action}]]]')
                 if NUM_OF_CLIENTS == 3:
                     self.calc_position()
                 delay = self.calc_delay()
                 # print(f"[[[sync delay calculated is {delay}]]]")
-                #if DASH_ON:
-                #    self.send_dash_evaluated(delay)
                 time.sleep(WAITTIME)
                 if EVAL_ON:
                     self.send_eval(dancer_pos, final_action, delay)
                     next_pos = self.evalclient.get_dancer_positions()
                 else:
-                    next_pos = '1 2 3'  # default bullshit
+                    next_pos = '1 2 3'  # default if eval server not connected
                 NUM_ROUNDS -= 1
-                #if next_pos == b'':
-                #    if DASH_ON and NUM_OF_CLIENTS == 3:
-                #        self.send_dash_evaluated(delay, dancer_pos)
-                #        self.stop()
-                #        break
+
                 try:
                     print(f"----received from eval server: {next_pos} ----\n")
                     new = next_pos.split(' ')
                     newi = [int(x) for x in new]
-                except ValueError as ve:
+                except ValueError:
                     if DASH_ON and NUM_OF_CLIENTS == 3:
                         self.send_dash_evaluated(delay, dancer_pos)
                         self.stop()
                     continue
-
                 dancer_pos = [int(x) - 1 for x in new]
                 if DASH_ON and NUM_OF_CLIENTS == 3:
                     self.send_dash_evaluated(delay, newi)
 
-                # basic logging if required
+                # basic logging
                 write_ind_action()
 
-                # clear buffer 
+                # clear all buffers
                 client_results = ['' for x in range(NUM_OF_CLIENTS)]
                 client_step = [0 for x in range(NUM_OF_CLIENTS)]
                 timestamp_list = [None for x in range(NUM_OF_CLIENTS)]
@@ -285,6 +294,10 @@ class Processing(threading.Thread):
                 counting_down = True
 
     def check_client_complete(self):
+        """
+        Check if all three clients have determined their respective action.
+        It is assumed that steps taken by clients are already set.
+        """
         is_complete = True
         for i in client_results:
             if i == '':
@@ -292,7 +305,7 @@ class Processing(threading.Thread):
                 break
         if is_complete:
             self.set_refresh_false()
-        
+
     def set_refresh_false(self):
         global EVAL_REFRESH
         EVAL_REFRESH = False
@@ -315,7 +328,8 @@ class Processing(threading.Thread):
             intermediate[curr_position] = actual_step
 
         if intermediate[0] == intermediate[-1] == 0:
-            print("no change")
+            # print("no change")
+            pass
         elif intermediate[0] == 1 and intermediate[-1] == 0:
             dancer_pos[0], dancer_pos[1] = dancer_pos[1], dancer_pos[0]
         elif intermediate[0] == 0 and intermediate[-1] == 1:
@@ -329,27 +343,29 @@ class Processing(threading.Thread):
         else:
             print(f'invalid position! now keeping previous position')
 
-        #print('[[[new dancer pos:', dancer_pos, ']]]')
-
     def send_eval(self, pos_result, action_result, delay):
         # format expected is smth like '#1 2 3|action|100'
         to_send = '#'
         for i in pos_result:
-            to_send += str(i+1) + ' '
+            to_send += str(i + 1) + ' '
         to_send = to_send[:-1] + "|"
         to_send += action_result + '|' + str(delay)
         print('\n----to send to eval_server: ', to_send, '----')
         self.evalclient.send_data(to_send)
 
     def send_dash_expected(self, expectedpos):
+        """
+        DEPRECATED. Sends dashboard server expected position. All other fields are dummy data.
+        """
         expectedposlist = expectedpos.split(' ')
         l = [int(x) for x in expectedposlist]
-        data = ['stream', 0, [0,0,0], l, '', '', '', 0, [0,0,0,0,0,0], [0,0,0,0,0,0], [0,0,0,0,0,0]]
+        data = ['stream', 0, [0, 0, 0], l, '', '', '', 0, [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]
         to_send = dict(zip(self.dashheaders, data))
         self.dashclient.send_data(to_send)
 
     def send_dash_evaluated(self, delay, ep):
-        got_pos = [x+1 for x in dancer_pos]
+        # sends as dict
+        got_pos = [x + 1 for x in dancer_pos]
         data = ['stream', 1, got_pos, ep, client_results[0], client_results[1], client_results[2], str(delay),
                 features_dict[0], features_dict[1], features_dict[2]]
         to_send = dict(zip(self.dashheaders, data))
@@ -364,12 +380,18 @@ class Processing(threading.Thread):
 
 
 def write_ind_action():
+    """
+    Basic logging function to record individual dancer actions before majority is chosen.
+    """
     with open("actions.txt", "a+") as f:
         f.write(str(client_results) + '\n')
 
 
 def getSeconds(dateInstance):
-    dt_obj = datetime.datetime.strptime(str(dateInstance),'%Y-%m-%d %H:%M:%S.%f')
+    """
+    DEPRECATED used to convert ntp timestamp to milliseconds.
+    """
+    dt_obj = datetime.datetime.strptime(str(dateInstance), '%Y-%m-%d %H:%M:%S.%f')
     millisec = dt_obj.timestamp() * 1000
     return int(millisec)
 
@@ -397,7 +419,7 @@ def main():
     sock.bind(server_address)
 
     # Listen for incoming connections
-    # allow for up to 10 reconnections (overkill but paranoid)
+    # allow for up to 10 reconnections
     sock.listen(NUM_OF_CLIENTS + 10)
 
     server_threads = []
@@ -408,7 +430,6 @@ def main():
     print(f'Waiting for {NUM_OF_CLIENTS} connection(s)...')
     try:
         for i in range(NUM_OF_CLIENTS):
-            # print(f'waiting for connection {i + 1}', file=sys.stderr)
             connection, client_address = sock.accept()
             print('connection from', client_address, file=sys.stderr)
             s = Server(connection)
@@ -420,37 +441,36 @@ def main():
         for s in server_threads:
             s.stop()
         print('Terminated server before connections are established.')
-        print('...but why did u fuck up bro')
         exit(0)
 
     for s in server_threads:
         s.start()
 
-    while NUM_ROUNDS > 0:
+    while True:
         try:
-            if threading.active_count() < NUM_OF_CLIENTS + 2:
+            if threading.active_count() == 1:
+                # only main thread remains which means processing thread has completed.
+                for s in server_threads:
+                    s.stop()
+                processing.stop()
+                print('\nSESSION COMPLETE. SERVER SHUTDOWN :)')
+                exit(0)
+            elif threading.active_count() < NUM_OF_CLIENTS + 2:
+                # 5 threads should be active: main thread + processing thread + 3 server threads
                 print('====attempting to reconnect a client===')
                 connection, client_address = sock.accept()
                 print('====connection from', client_address, "===")
                 s = Server(connection)
                 server_threads.append(s)
-                # print("current threads alive:", threading.enumerate())
                 s.start()
-            # pass
         except KeyboardInterrupt:
+            # manual termination
             for s in server_threads:
                 s.stop()
             processing.stop()
-            print('\nSERVER SHUTDOWN. Goodbye bitches see you never.')
+            print('\nSERVER SHUTDOWN.')
             exit(0)
-
-    for s in server_threads:
-        s.stop()
-    processing.stop()
-    print('\nOH SHIT YOU\'RE DONE FLY AWAY LIKE A FREE BIRD NEVER TO BE SEEN AGAIN AAAAAAAAAAAAA')
-    exit(0)
 
 
 if __name__ == '__main__':
     main()
-
