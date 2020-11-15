@@ -56,6 +56,7 @@ def construct_message():
     return data
 
 
+# run as main for testing
 def main():
     if len(sys.argv) != 4:
         print('Invalid number of arguments')
