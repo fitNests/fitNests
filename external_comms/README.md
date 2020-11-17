@@ -66,21 +66,33 @@ Increment port number by 1 (in code and args) if encountered socket connection r
 ## System setup flow (IMPORTANT)
 
 1. Setting up ssh tunnels
+
     a. Three dancers set up ssh port forwarding to sunfire
+    
     b. Clay sets up ssh port forwarding from sunfire to fpga (laptop --> fpga complete)
+    
     c. Umar sets up ssh remote port forwarding from sunfire to dashboard
+    
     d. Clay sets up ssh port forwarding from fpga to sunfire (fpga --> dashboard complete)
   
-2. Running servers and clients _(we only have 60 seconds after eval_server starts running!)
+2. Running servers and clients _(we only have 60 seconds after eval_server starts running!)_
+
     a. Get eval server IP address, give port number and secret key
+    
     b. Umar runs dashboard server
+    
     c. Give OK to run eval server _(60 seconds start here)_
+    
     d. Clay runs fpga server, enters eval server ip address. Wait for 'waiting for connection'
+    
     e. Three dancers run client to connect to fpga server
+    
     f. Wait for eval server to display move and position, and ~~undulate~~ dance!
   
 3. Evaluation done
+
     a. all clients logout by `Ctrl+C`
+    
     b. fpga server shuts down by `Ctrl+C`
-    c. all remaining servers should subsequently shut down with properly closed sockets. 
-       `Ctrl+C` any that are still up, but be aware that sockets may not close properly.
+    
+    c. all remaining servers should subsequently shut down with properly closed sockets. `Ctrl+C` any that are still up, but be aware that sockets may not close properly.
